@@ -197,3 +197,15 @@ def test_store_full_returns_503_and_releases_the_slot(client, public, settings):
     assert public_post(client).status_code == 302
     assert public_post(client, url="https://example.com/other").status_code == 503
     assert state.get().slots._n == 0
+
+
+def test_csrf_flow_works_with_enforced_checks_and_own_cookie_name():
+    from django.test import Client
+
+    c = Client(enforce_csrf_checks=True)
+    form = c.get(reverse("index"))
+    assert "siteward_csrftoken" in form.cookies and "csrftoken" not in form.cookies  # no clash with other local Django apps
+    token = form.cookies["siteward_csrftoken"].value
+    # a POST without the token is rejected; with the token it is processed (400 = our own validation, not CSRF 403)
+    assert c.post(reverse("index"), {"url": "http://example.com"}).status_code == 403
+    assert c.post(reverse("index"), {"url": "http://example.com", "csrfmiddlewaretoken": token}).status_code == 400

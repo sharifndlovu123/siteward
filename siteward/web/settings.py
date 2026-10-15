@@ -69,6 +69,7 @@ STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = Path(os.environ.get("STATIC_ROOT", Path.cwd() / "staticfiles"))
 USE_TZ = True
+CSRF_COOKIE_NAME = "siteward_csrftoken"  # own name: other Django apps on localhost share "csrftoken" across ports
 CSRF_COOKIE_SECURE = PUBLIC_MODE
 CSRF_COOKIE_HTTPONLY = True
 X_FRAME_OPTIONS = "DENY"
