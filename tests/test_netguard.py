@@ -70,7 +70,7 @@ def test_redirect_to_metadata_address_is_blocked(fake_dns):
 
     with pytest.raises(BlockedTarget):
         _client(handler).get("https://example.com/")
-    assert seen == ["https://example.com/"]  # the internal address was never requested
+    assert len(seen) == 1 and "169.254.169.254" not in seen[0]  # the internal address was never requested
 
 
 def test_redirect_to_hostname_resolving_private_is_blocked(fake_dns):

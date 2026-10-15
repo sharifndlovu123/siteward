@@ -35,4 +35,4 @@ def test_expired_cert_is_high():
 
 def test_non_https_target_is_skipped():
     with pytest.raises(Skip):
-        tls.run(NS(target=NS(scheme="http", host="x", port=80)))
+        tls.run(NS(final=NS(scheme="http", host="x", port=80, ips=("93.184.216.34",))))

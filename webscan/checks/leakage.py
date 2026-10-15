@@ -7,7 +7,8 @@ CATEGORY = "Information leakage"
 OPT_IN = None
 PROBE_PATH = "/webscan-not-found-probe"
 _VERSIONED = re.compile(r"\d+\.\d+")
-_TRACE_MARKERS = ("Traceback (most recent call last)", "Stack trace:", "at java.", "Fatal error:", "SQLSTATE", "Whoops!")
+_TRACE_MARKERS = ("Traceback (most recent call last)", "Stack trace:", "at java.", "Fatal error:", "SQLSTATE[",
+                  "Exception in thread", "Whoops! There was an error")
 
 
 def run(ctx):
@@ -22,7 +23,8 @@ def run(ctx):
             out.append(Finding("leakage.x-powered-by", f"{name} header discloses technology", CATEGORY, "low",
                                f"{name}: {h.get(name)}", f"Remove the {name} header."))
     probe = ctx.client.get(ctx.target.url.rstrip("/") + PROBE_PATH)
-    if any(marker in probe.text for marker in _TRACE_MARKERS):
+    # Only an error status counts: a 200 "not found" page that happens to contain scary words is a soft 404.
+    if probe.status >= 400 and any(marker in probe.text for marker in _TRACE_MARKERS):
         out.append(Finding("leakage.verbose-errors", "Error page exposes a stack trace", CATEGORY, "medium",
                            f"GET {PROBE_PATH} -> {probe.status} with debug output",
                            "Disable debug/verbose error output in production."))

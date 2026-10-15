@@ -1,8 +1,18 @@
 """Plain data types shared by every layer. No framework imports."""
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
+
+# C0/C1 control characters except tab and newline: target-controlled text must never be able to
+# carry terminal escape sequences into a report.
+_CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
+
+
+def clean(text: str) -> str:
+    return _CONTROL.sub("�", text)
+
 
 SEVERITIES = ("info", "low", "medium", "high", "critical")
 _RANK = {name: i for i, name in enumerate(SEVERITIES)}
@@ -29,6 +39,7 @@ class Finding:
     def __post_init__(self):
         if self.severity not in _RANK:
             raise ValueError(f"unknown severity: {self.severity!r}")
+        self.title, self.evidence, self.remediation = clean(self.title), clean(self.evidence), clean(self.remediation)
 
 
 @dataclass
@@ -38,6 +49,9 @@ class CheckResult:
     status: str  # passed | findings | skipped | error
     findings: list[Finding] = field(default_factory=list)
     message: str = ""
+
+    def __post_init__(self):
+        self.message = clean(self.message)
 
 
 @dataclass

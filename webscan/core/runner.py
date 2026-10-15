@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import importlib
 import pkgutil
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from concurrent.futures import TimeoutError as FuturesTimeout
+import queue
+import threading
+import time
 from datetime import datetime, timezone
 
 from webscan import __version__
@@ -59,22 +60,30 @@ def run_scan(url, options=None, on_result=None, checks=None, timeout=60.0, clien
         if on_result:
             on_result(result)
 
-    pool = ThreadPoolExecutor(max_workers=MAX_WORKERS)
-    futures = {pool.submit(_run_one, module, ctx): module for module in modules}
-    finished = set()
-    try:
-        for future in as_completed(futures, timeout=timeout):
-            finished.add(future)
-            emit(future.result())
-    except FuturesTimeout:
-        pass
-    finally:
-        pool.shutdown(wait=False, cancel_futures=True)
-    for future, module in futures.items():
-        if future not in finished:
-            emit(CheckResult(module.ID, module.CATEGORY, "error", message=f"timed out after {timeout:g}s"))
+    # Daemon threads (not a ThreadPoolExecutor): an abandoned, hung check must not keep the process alive.
+    done: queue.Queue = queue.Queue()
+    slots = threading.Semaphore(MAX_WORKERS)
 
-    ctx.client.close()
+    def worker(module):
+        with slots:
+            done.put((module, _run_one(module, ctx)))
+
+    pending = {id(m): m for m in modules}
+    for module in modules:
+        threading.Thread(target=worker, args=(module,), name=f"webscan-check-{module.ID}", daemon=True).start()
+    deadline = time.monotonic() + timeout
+    while pending:
+        try:
+            module, result = done.get(timeout=max(0.0, deadline - time.monotonic()))
+        except queue.Empty:
+            break
+        pending.pop(id(module), None)
+        emit(result)
+    for module in pending.values():
+        emit(CheckResult(module.ID, module.CATEGORY, "error", message=f"timed out after {timeout:g}s"))
+
+    if not pending:  # never close the client under a still-running abandoned check
+        ctx.client.close()
     results.sort(key=lambda r: r.check_id)
     return ScanReport(
         target=ctx.target.url,

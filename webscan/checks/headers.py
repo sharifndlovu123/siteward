@@ -23,7 +23,7 @@ def run(ctx):
             "Remove 'unsafe-inline'/'unsafe-eval'; use nonces or hashes.", evidence=csp)
 
     hsts = h.get("strict-transport-security")
-    if ctx.target.scheme == "https":
+    if ctx.final.scheme == "https":  # the scheme the page was actually served over, after redirects
         if not hsts:
             add("hsts", "Strict-Transport-Security header missing", "medium",
                 "Send 'Strict-Transport-Security: max-age=31536000; includeSubDomains'.")

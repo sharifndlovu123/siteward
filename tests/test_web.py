@@ -188,3 +188,12 @@ def test_dashlite_used_when_present(client, settings, tmp_path, monkeypatch):
     monkeypatch.setattr(ctx_module, "BASE_DIR", tmp_path)
     settings.THEME = "dashlite"
     assert b"theme/dashlite/css/dashlite.css" in client.get(reverse("index")).content
+
+
+def test_store_full_returns_503_and_releases_the_slot(client, public, settings):
+    settings.MAX_STORED_SCANS = 1
+    settings.RATE_PER_IP = 100
+    state.reset()
+    assert public_post(client).status_code == 302
+    assert public_post(client, url="https://example.com/other").status_code == 503
+    assert state.get().slots._n == 0

@@ -36,8 +36,10 @@ def test_oldest_dropped_when_full():
     clock = Clock()
     store = Store(max_entries=2, clock=clock)
     first = store.create("http://a/", {})
+    first.finished = clock.now
     clock.now += 1
     second = store.create("http://b/", {})
+    second.finished = clock.now
     clock.now += 1
     third = store.create("http://c/", {})
     assert store.get(first.id) is None and store.get(second.id) and store.get(third.id)

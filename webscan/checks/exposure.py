@@ -53,15 +53,38 @@ PROBES = [
 _LISTING_DIRS = ("/uploads/", "/backup/", "/files/")
 
 
+_HTML_OK = {"phpinfo", "server-status"}  # these legitimately are HTML pages
+SOFT_404_PROBE = "/webscan-soft404-probe"
+
+
+def _is_html(fetch):
+    return fetch.headers.get("content-type", "").lower().startswith("text/html")
+
+
 def run(ctx):
     base = ctx.target.url.rstrip("/")
     out, seen = [], set()
+
+    # Soft-404 guard: a site that answers 200 to unknown paths (or redirects them to its homepage)
+    # must not make its own error/home page look like an exposed file.
+    soft_bodies = {ctx.baseline.body}
+    probe_body = None
+    try:
+        probe = ctx.client.get(base + SOFT_404_PROBE)
+        if probe.status == 200:
+            probe_body = probe.body
+            soft_bodies.add(probe.body)
+    except FetchError:
+        pass
+
     for path, slug, valid, severity, title, fix in PROBES:
         if slug in seen:
             continue
         try:
             fetch = ctx.client.get(base + path)
         except FetchError:
+            continue
+        if fetch.body in soft_bodies or (_is_html(fetch) and slug not in _HTML_OK):
             continue
         if fetch.status == 200 and valid(fetch.body):
             seen.add(slug)
@@ -76,6 +99,8 @@ def run(ctx):
         except FetchError:
             continue
     for path, fetch in pages:
+        if path != "/" and probe_body is not None and fetch.body == probe_body:
+            continue  # same page as an unknown path: a soft 404, not a listing
         if fetch.status == 200 and re.search(r"<title>\s*Index of /", fetch.text, re.I):
             out.append(Finding("exposure.directory-listing", "Directory listing is enabled", CATEGORY, "medium",
                                f"{path} shows an 'Index of' page", "Disable directory listing (autoindex off)."))

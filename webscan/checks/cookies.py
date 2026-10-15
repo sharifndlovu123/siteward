@@ -9,10 +9,12 @@ _SENSITIVE = re.compile(r"sess|token|auth|jwt|sid|login", re.I)
 
 
 def run(ctx):
-    https = ctx.target.scheme == "https"
+    https = ctx.final.scheme == "https"
     out = []
     for raw in ctx.baseline.headers.get_list("set-cookie"):
-        name = raw.split("=", 1)[0].strip()
+        first = raw.split(";")[0]
+        # RFC 6265: a cookie without '=' has an empty name and the text is its VALUE: never echo it
+        name = first.split("=", 1)[0].strip() if "=" in first else "(unnamed)"
         attrs = [a.strip().lower() for a in raw.split(";")[1:]]
         secure = "secure" in attrs
         httponly = "httponly" in attrs

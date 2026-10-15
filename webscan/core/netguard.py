@@ -37,10 +37,21 @@ class Target:
     ips: tuple
 
 
+_NAT64_PREFIX = bytes.fromhex("0064ff9b0000000000000000")
+
+
 def _is_public(ip_text: str) -> bool:
     ip = ipaddress.ip_address(ip_text)
-    if ip.version == 6 and ip.ipv4_mapped:
-        ip = ip.ipv4_mapped
+    if ip.version == 6:
+        packed = ip.packed
+        if ip.ipv4_mapped:
+            ip = ip.ipv4_mapped
+        elif packed[:12] == bytes(12):  # IPv4-compatible ::/96
+            return False
+        elif packed[:12] == _NAT64_PREFIX:  # NAT64 64:ff9b::/96 embeds an IPv4 address
+            ip = ipaddress.IPv4Address(packed[12:])
+        elif packed[:2] == b"\x20\x02":  # 6to4 2002::/16 embeds an IPv4 address
+            ip = ipaddress.IPv4Address(packed[2:6])
     return ip.is_global
 
 
@@ -95,9 +106,10 @@ class Fetch:
 
 
 class GuardedClient:
-    def __init__(self, allow_private=False, min_interval=0.05, timeout=10.0, transport=None):
+    def __init__(self, allow_private=False, min_interval=0.05, timeout=10.0, transport=None, max_duration=20.0):
         self.allow_private = allow_private
         self._min_interval = min_interval
+        self._max_duration = max_duration  # wall-clock cap per get(), across redirects (slow-drip defence)
         self._lock = threading.Lock()
         self._last = 0.0
         self._client = httpx.Client(
@@ -105,6 +117,7 @@ class GuardedClient:
             timeout=timeout,
             headers={"User-Agent": USER_AGENT},
             transport=transport,
+            trust_env=False,  # never pick up proxy env vars or ~/.netrc credentials for scan traffic
         )
 
     def close(self):
@@ -118,28 +131,50 @@ class GuardedClient:
             self._last = time.monotonic()
 
     @staticmethod
-    def _read_capped(response) -> bytes:
+    def _read_capped(response, deadline) -> bytes:
         buf = bytearray()
         for chunk in response.iter_bytes():
             buf.extend(chunk)
             if len(buf) >= MAX_BODY:
                 del buf[MAX_BODY:]
                 break
+            if time.monotonic() > deadline:
+                raise FetchError("response too slow (total time limit exceeded)")
         return bytes(buf)
 
+    def _request(self, target: Target, headers, deadline):
+        """GET the validated target by connecting to a validated IP (pinned), keeping Host/SNI unchanged."""
+        parts = urlsplit(target.url)
+        default_port = 443 if target.scheme == "https" else 80
+        shown_host = f"[{target.host}]" if ":" in target.host else target.host
+        host_header = shown_host if target.port == default_port else f"{shown_host}:{target.port}"
+        extensions = {"sni_hostname": target.host} if target.scheme == "https" else {}
+        last_error = None
+        for ip in target.ips:
+            shown_ip = f"[{ip}]" if ":" in ip else ip
+            ip_url = urlunsplit((target.scheme, f"{shown_ip}:{target.port}", parts.path or "/", parts.query, ""))
+            self._pace()
+            try:
+                with self._client.stream("GET", ip_url, headers={"Host": host_header, **(headers or {})},
+                                         extensions=extensions) as response:
+                    body = self._read_capped(response, deadline)
+                    return response.status_code, response.headers, body
+            except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+                last_error = exc  # try the next validated address
+            except httpx.HTTPError as exc:
+                raise FetchError(f"{type(exc).__name__}: {exc}") from exc
+        raise FetchError(f"{type(last_error).__name__}: {last_error}")
+
     def get(self, url: str, follow: bool = True, headers: dict | None = None) -> Fetch:
+        deadline = time.monotonic() + self._max_duration
         chain = []
         current = url
         for _ in range(MAX_REDIRECTS + 1):
-            validate_target(current, self.allow_private)  # re-validated on every hop
+            target = validate_target(current, self.allow_private)  # re-validated on every hop
             chain.append(current)
-            self._pace()
-            try:
-                with self._client.stream("GET", current, headers=headers) as response:
-                    body = self._read_capped(response)
-                    status, response_headers = response.status_code, response.headers
-            except httpx.HTTPError as exc:
-                raise FetchError(f"{type(exc).__name__}: {exc}") from exc
+            if time.monotonic() > deadline:
+                raise FetchError("total time limit exceeded")
+            status, response_headers, body = self._request(target, headers, deadline)
             location = response_headers.get("location")
             if follow and status in _REDIRECT_STATUSES and location:
                 current = urljoin(current, location)

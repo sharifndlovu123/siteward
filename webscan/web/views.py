@@ -17,6 +17,7 @@ from webscan.core.runner import ScanError, run_scan
 from webscan.reports import FORMATS
 
 from . import state, turnstile
+from .store import StoreFull
 
 logger = logging.getLogger(__name__)
 BADGE = {"critical": "danger", "high": "danger", "medium": "warning", "low": "info", "info": "secondary"}
@@ -86,9 +87,14 @@ def _start_scan(request):
 
     ports = bool(request.POST.get("ports")) and not settings.PUBLIC_MODE
     options = {"ports": ports, "allow_private": allow_private, "min_interval": settings.SCAN_MIN_INTERVAL}
-    entry = st.store.create(target.url, options)
+    try:
+        entry = st.store.create(target.url, options)
+        threading.Thread(target=_run, args=(st, entry), daemon=True).start()
+    except (StoreFull, RuntimeError):
+        st.slots.release()  # do not leak the reserved slot
+        st.abuse.record(ip, target.host, {}, "busy")
+        return None, "The scanner is busy. Please try again shortly.", 503
     st.abuse.record(ip, target.host, {"ports": ports}, "accepted")
-    threading.Thread(target=_run, args=(st, entry), daemon=True).start()
     return entry, "", 302
 
 

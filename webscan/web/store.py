@@ -12,6 +12,10 @@ from webscan.core.models import ScanReport
 _STUCK_AFTER = 3600
 
 
+class StoreFull(Exception):
+    """Every slot holds an unfinished scan; refuse rather than evict someone else's in-flight result."""
+
+
 class Entry:
     def __init__(self, scan_id, url, options, clock=time.time):
         self.id = scan_id
@@ -51,8 +55,10 @@ class Store:
         with self._lock:
             self._sweep()
             while len(self._entries) >= self._max:
-                oldest = min(self._entries.values(), key=lambda e: e.created)
-                del self._entries[oldest.id]
+                finished = [e for e in self._entries.values() if e.finished is not None]
+                if not finished:
+                    raise StoreFull
+                del self._entries[min(finished, key=lambda e: e.created).id]
             entry = Entry(secrets.token_urlsafe(16), url, options, clock=self._clock)
             self._entries[entry.id] = entry
             return entry

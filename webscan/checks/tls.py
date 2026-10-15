@@ -22,14 +22,15 @@ def _assess_cert(cert: dict, now: float) -> list:
     return []
 
 
-def _fetch_cert(host, port):
+def _fetch_cert(ip, host, port):
+    """Connect to the netguard-validated IP; the hostname is used only for SNI and verification."""
     context = ssl.create_default_context()
-    with socket.create_connection((host, port), TIMEOUT) as sock:
+    with socket.create_connection((ip, port), TIMEOUT) as sock:
         with context.wrap_socket(sock, server_hostname=host) as tls:
             return tls.getpeercert(), tls.version()
 
 
-def _accepts_legacy(host, port):
+def _accepts_legacy(ip, host, port):
     """Return the negotiated version if TLS 1.0/1.1 is accepted, False if refused, None if we cannot test."""
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     # Certificate verification is deliberately off HERE ONLY: this is a protocol-support probe that
@@ -43,7 +44,7 @@ def _accepts_legacy(host, port):
     except (ssl.SSLError, ValueError):
         return None
     try:
-        with socket.create_connection((host, port), TIMEOUT) as sock:
+        with socket.create_connection((ip, port), TIMEOUT) as sock:
             with context.wrap_socket(sock, server_hostname=host) as tls:
                 return tls.version()
     except (ssl.SSLError, OSError):
@@ -51,11 +52,12 @@ def _accepts_legacy(host, port):
 
 
 def run(ctx):
-    t = ctx.target
+    t = ctx.final  # where the site is really served (after redirects), with netguard-validated IPs
     if t.scheme != "https":
         raise Skip("target is not served over HTTPS")
+    ip = t.ips[0]
     try:
-        cert, version = _fetch_cert(t.host, t.port)
+        cert, version = _fetch_cert(ip, t.host, t.port)
     except ssl.SSLCertVerificationError as exc:
         return [Finding("tls.cert-invalid", "TLS certificate failed verification", CATEGORY, "high",
                         exc.verify_message or str(exc),
@@ -67,7 +69,7 @@ def run(ctx):
     if version in ("TLSv1", "TLSv1.1"):
         out.append(Finding("tls.legacy-protocol", f"Negotiated legacy protocol {version}", CATEGORY, "high",
                            version, "Disable TLS 1.0/1.1; require TLS 1.2+."))
-    elif _accepts_legacy(t.host, t.port):
+    elif _accepts_legacy(ip, t.host, t.port):
         out.append(Finding("tls.legacy-protocol", "Server accepts TLS 1.0/1.1", CATEGORY, "medium",
                            "A TLS 1.0/1.1 handshake succeeded", "Disable TLS 1.0/1.1; require TLS 1.2+."))
     return out
