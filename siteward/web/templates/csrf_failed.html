@@ -1,0 +1,11 @@
+{% extends base_template %}
+{% block title %}Form expired{% endblock %}
+{% block content %}
+<div class="alert alert-warning" role="alert">
+  <h1 class="h5">The form could not be verified</h1>
+  <p class="mb-1">Reason: <strong>{{ reason }}</strong></p>
+  <p class="mb-0">This usually means the page was open from before the server restarted, or your browser is blocking cookies for this site.
+  Please <a href="{% url 'index' %}">reload the page</a> and try again. If it keeps happening, allow cookies for this address
+  and make sure you are using the same address (for example <code>localhost</code> vs <code>127.0.0.1</code>) from start to finish.</p>
+</div>
+{% endblock %}

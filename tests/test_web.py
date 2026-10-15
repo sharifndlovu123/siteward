@@ -209,3 +209,16 @@ def test_csrf_flow_works_with_enforced_checks_and_own_cookie_name():
     # a POST without the token is rejected; with the token it is processed (400 = our own validation, not CSRF 403)
     assert c.post(reverse("index"), {"url": "http://example.com"}).status_code == 403
     assert c.post(reverse("index"), {"url": "http://example.com", "csrfmiddlewaretoken": token}).status_code == 400
+
+
+def test_csrf_failure_page_explains_the_reason_and_how_to_recover(caplog):
+    from django.test import Client
+
+    c = Client(enforce_csrf_checks=True)
+    with caplog.at_level("WARNING"):
+        response = c.post(reverse("index"), {"url": "http://example.com"})  # no cookie, no token
+    assert response.status_code == 403
+    body = response.content.decode()
+    assert "CSRF cookie not set" in body and "reload" in body.lower()
+    assert any("csrf rejected" in r.message and "CSRF cookie not set" in r.message for r in caplog.records)
+    assert "example.com" not in " ".join(r.message for r in caplog.records)  # never log the target

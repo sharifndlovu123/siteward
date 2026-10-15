@@ -72,6 +72,16 @@ USE_TZ = True
 CSRF_COOKIE_NAME = "siteward_csrftoken"  # own name: other Django apps on localhost share "csrftoken" across ports
 CSRF_COOKIE_SECURE = PUBLIC_MODE
 CSRF_COOKIE_HTTPONLY = True
+CSRF_FAILURE_VIEW = "siteward.web.views.csrf_failure"
 X_FRAME_OPTIONS = "DENY"
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
-LOGGING = {"version": 1, "disable_existing_loggers": False, "root": {"level": "WARNING"}}
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    # Security warnings (rejected CSRF, bad Host header) must be visible in production logs.
+    "loggers": {
+        "django.security": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "siteward": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+    },
+}

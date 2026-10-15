@@ -180,3 +180,9 @@ def policy(request):
     return render(request, "policy.html", {"contact_email": settings.CONTACT_EMAIL,
                                            "retention_days": settings.ABUSE_LOG_RETENTION_DAYS,
                                            "ttl_minutes": settings.SCAN_TTL_SECONDS // 60})
+
+
+def csrf_failure(request, reason=""):
+    """Friendly 403 for failed CSRF checks: state the reason and how to recover. Never logs request data."""
+    logger.warning("csrf rejected: %s", reason)
+    return render(request, "csrf_failed.html", {"reason": reason}, status=403)
