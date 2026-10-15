@@ -168,3 +168,23 @@ def test_public_mode_still_refuses_private_targets(client, public, fake_dns):
     fake_dns["internal.example"] = "10.0.0.7"
     response = public_post(client, url="https://internal.example")
     assert response.status_code == 400 and b"Cannot scan" in response.content
+
+
+def test_default_theme_is_bootstrap(client):
+    assert b"vendor/bootstrap.min.css" in client.get(reverse("index")).content
+
+
+def test_dashlite_requested_but_absent_falls_back_to_bootstrap(client, settings):
+    settings.THEME = "dashlite"
+    assert b"vendor/bootstrap.min.css" in client.get(reverse("index")).content
+
+
+def test_dashlite_used_when_present(client, settings, tmp_path, monkeypatch):
+    from webscan.web import context as ctx_module
+
+    fake_root = tmp_path / "static" / "theme" / "dashlite" / "css"
+    fake_root.mkdir(parents=True)
+    (fake_root / "dashlite.css").write_text("/* stub */")
+    monkeypatch.setattr(ctx_module, "BASE_DIR", tmp_path)
+    settings.THEME = "dashlite"
+    assert b"theme/dashlite/css/dashlite.css" in client.get(reverse("index")).content
