@@ -1,0 +1,15 @@
+{% extends base_template %}
+{% block title %}Policy &amp; privacy{% endblock %}
+{% block content %}
+<h1 class="h3">Usage policy &amp; privacy</h1>
+<h2 class="h5 mt-4">Acceptable use</h2>
+<p>This tool runs passive security checks. Only scan sites you own or are explicitly authorised to test. Scans are rate limited, and abuse may be reported to relevant parties.</p>
+<h2 class="h5 mt-4">What we store</h2>
+<ul>
+  <li>Scan results are held in server memory only, for about {{ ttl_minutes }} minutes after a scan finishes, then discarded. They are never written to disk or a database.</li>
+  <li>To handle abuse reports, we keep a minimal log for {{ retention_days }} days: time, your IP address, a keyed hash of the scanned hostname, which options were used, and the outcome. We do not log findings, page content or full URLs.</li>
+  <li>Our network provider (Cloudflare) keeps its own request logs under its own policy.</li>
+</ul>
+<h2 class="h5 mt-4">Contact</h2>
+<p>{% if contact_email %}Abuse reports and questions: <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>{% else %}Contact details are set by the operator of this instance.{% endif %}</p>
+{% endblock %}

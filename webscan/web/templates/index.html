@@ -1,0 +1,27 @@
+{% extends base_template %}
+{% block title %}webscan{% endblock %}
+{% block content %}
+<h1 class="h3">Scan a website</h1>
+<p class="text-muted">Passive security checks. Results are shown here and are <strong>not stored</strong>: export anything you want to keep.</p>
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+<form method="post" class="mb-3">
+  {% csrf_token %}
+  <div class="mb-3">
+    <label for="url" class="form-label">Site URL</label>
+    <input id="url" name="url" type="text" class="form-control" placeholder="https://example.com" value="{{ url }}" required>
+  </div>
+  <div class="form-check mb-2">
+    <input class="form-check-input" type="checkbox" name="authorised" id="authorised">
+    <label class="form-check-label" for="authorised">I am authorised to test this target.</label>
+  </div>
+  {% if not public_mode %}
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" name="ports" id="ports">
+    <label class="form-check-label" for="ports">Include the TCP port check (opens connections to ~20 common ports).</label>
+  </div>
+  {% endif %}
+  {% if turnstile_site_key %}<div class="cf-turnstile mb-3" data-sitekey="{{ turnstile_site_key }}"></div>{% endif %}
+  <button class="btn btn-primary" type="submit">Run scan</button>
+</form>
+{% endblock %}
+{% block scripts %}{% if turnstile_site_key %}<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{% endif %}{% endblock %}

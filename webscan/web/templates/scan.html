@@ -1,0 +1,13 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}Scan results{% endblock %}
+{% block content %}
+{% if expired %}
+  <div class="alert alert-warning">This scan has expired or does not exist. Results are not stored on the server: run the scan again.</div>
+  <a class="btn btn-primary" href="{% url 'index' %}">New scan</a>
+{% else %}
+  <div class="alert alert-secondary small">Results are not stored and expire {{ ttl_minutes }} minutes after the scan finishes. Export anything you want to keep.</div>
+  <div id="results" data-status-url="{% url 'scan_status' scan_id %}">{% include "_results.html" %}</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if not expired %}<script src="{% static 'js/poll.js' %}"></script>{% endif %}{% endblock %}

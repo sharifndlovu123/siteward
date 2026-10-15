@@ -34,3 +34,5 @@ webscan = ["reports/*.j2", "web/templates/**/*", "web/static/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+DJANGO_SETTINGS_MODULE = "webscan.web.settings"
+filterwarnings = ["ignore:No directory at:UserWarning"]

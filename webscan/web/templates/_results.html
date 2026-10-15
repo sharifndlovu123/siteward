@@ -1,0 +1,35 @@
+{% if expired %}
+<div class="alert alert-warning">This scan has expired or does not exist. Results are not stored on the server: run the scan again.</div>
+{% else %}
+<h1 class="h4">Scan of {{ report.target }}</h1>
+{% if entry.status == "error" %}
+  <div class="alert alert-danger" role="alert">{{ entry.error }}</div>
+{% elif not done %}
+  <div class="alert alert-info">{% if entry.status == "queued" %}Queued...{% else %}Scanning... {{ completed }} of {{ total }} checks complete.{% endif %}</div>
+{% else %}
+  <p>Grade <span class="badge bg-dark fs-5">{{ report.grade }}</span>
+  {% if report.incomplete %}<strong class="text-danger ms-2">Incomplete: some checks errored.</strong>{% endif %}</p>
+  <p>{% for s, n, badge in counts %}<span class="badge bg-{{ badge }} me-1">{{ s }} {{ n }}</span>{% endfor %}</p>
+  <p>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'scan_export' scan_id %}?format=json">Export JSON</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'scan_export' scan_id %}?format=md">Export Markdown</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'scan_export' scan_id %}?format=html">Export HTML</a>
+  </p>
+{% endif %}
+
+{% if entry.status != "error" %}
+<h2 class="h5 mt-4">Findings</h2>
+{% if not findings %}<p class="text-muted">{% if done %}No findings.{% else %}None yet.{% endif %}</p>{% endif %}
+{% for item in findings %}
+<details class="border rounded p-2 mb-2">
+  <summary><span class="badge bg-{{ item.badge }} me-2">{{ item.f.severity }}</span>{{ item.f.title }}</summary>
+  {% if item.f.evidence %}<p class="mt-2 mb-1">Evidence:</p><pre class="bg-light p-2 small">{{ item.f.evidence }}</pre>{% endif %}
+  {% if item.f.remediation %}<p><strong>Fix:</strong> {{ item.f.remediation }}</p>{% endif %}
+</details>
+{% endfor %}
+
+{% if errors %}<h2 class="h5 mt-4 text-danger">Errored checks</h2><ul>{% for r in errors %}<li><code>{{ r.check_id }}</code>: {{ r.message }}</li>{% endfor %}</ul>{% endif %}
+{% if skipped %}<h2 class="h5 mt-4">Skipped checks</h2><ul>{% for r in skipped %}<li><code>{{ r.check_id }}</code>: {{ r.message }}</li>{% endfor %}</ul>{% endif %}
+{% if passed %}<details class="mt-4"><summary>Passed checks ({{ passed|length }})</summary><ul>{% for r in passed %}<li><code>{{ r.check_id }}</code></li>{% endfor %}</ul></details>{% endif %}
+{% endif %}
+{% endif %}
