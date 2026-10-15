@@ -39,3 +39,26 @@ def ctx_for():
         return build_context(server.url, opts)
 
     return make
+
+
+from datetime import datetime, timezone  # noqa: E402
+
+from webscan.core.models import CheckResult, Finding, ScanReport  # noqa: E402
+
+HOSTILE = "<script>alert(1)</script>"
+
+
+@pytest.fixture
+def sample_report():
+    now = datetime(2026, 10, 15, 12, 0, tzinfo=timezone.utc)
+    results = [
+        CheckResult("headers.security", "Headers", "findings",
+                    [Finding("headers.csp", "CSP missing", "Headers", "medium", "header not present", "Add a CSP")]),
+        CheckResult("leakage.banner", "Leakage", "findings",
+                    [Finding("leakage.x-powered-by", f"X-Powered-By: {HOSTILE}", "Leakage", "low",
+                             f"x-powered-by: {HOSTILE}\n```evil```", "Remove it")]),
+        CheckResult("tls.certificate", "TLS", "skipped", message="target is not served over HTTPS"),
+        CheckResult("cookies.flags", "Cookies", "passed"),
+        CheckResult("dns.email", "DNS", "error", message="TimeoutError: lookup"),
+    ]
+    return ScanReport("http://example.com/", now, now, "0.1.0", {"ports": False}, results)
