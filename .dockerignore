@@ -1,0 +1,9 @@
+.venv
+.git
+.superpowers
+docs
+tests
+__pycache__
+*.egg-info
+staticfiles
+webscan/web/static/theme
