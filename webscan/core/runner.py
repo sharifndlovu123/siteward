@@ -61,16 +61,25 @@ def run_scan(url, options=None, on_result=None, checks=None, timeout=60.0, clien
             on_result(result)
 
     # Daemon threads (not a ThreadPoolExecutor): an abandoned, hung check must not keep the process alive.
+    # At most MAX_WORKERS threads exist per scan; they pull checks from a queue and stop pulling once the
+    # scan deadline has passed, so abandoned scans cannot accumulate threads or start new work.
     done: queue.Queue = queue.Queue()
-    slots = threading.Semaphore(MAX_WORKERS)
+    todo: queue.Queue = queue.Queue()
+    stop = threading.Event()
+    for module in modules:
+        todo.put(module)
 
-    def worker(module):
-        with slots:
+    def worker():
+        while not stop.is_set():
+            try:
+                module = todo.get_nowait()
+            except queue.Empty:
+                return
             done.put((module, _run_one(module, ctx)))
 
     pending = {id(m): m for m in modules}
-    for module in modules:
-        threading.Thread(target=worker, args=(module,), name=f"webscan-check-{module.ID}", daemon=True).start()
+    for n in range(min(MAX_WORKERS, len(modules))):
+        threading.Thread(target=worker, name=f"webscan-check-worker-{n}", daemon=True).start()
     deadline = time.monotonic() + timeout
     while pending:
         try:
@@ -79,6 +88,7 @@ def run_scan(url, options=None, on_result=None, checks=None, timeout=60.0, clien
             break
         pending.pop(id(module), None)
         emit(result)
+    stop.set()
     for module in pending.values():
         emit(CheckResult(module.ID, module.CATEGORY, "error", message=f"timed out after {timeout:g}s"))
 

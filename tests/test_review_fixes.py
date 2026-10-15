@@ -204,3 +204,25 @@ def test_nameless_cookie_value_is_not_echoed(server, ctx_for):
     server.add("/", "<html></html>", headers=[("Set-Cookie", "abc123secretvalue; HttpOnly")])
     found = cookies.run(ctx_for(server))
     assert found and all("abc123secretvalue" not in f.title + f.evidence for f in found)
+
+
+# ---- runner: bounded worker threads (follow-up to background review) ----------------------
+
+def test_runner_never_has_more_than_max_workers_check_threads(server):
+    from webscan.core import runner
+
+    checks = [NS(ID=f"slow.{i:02d}", CATEGORY="T", OPT_IN=None, run=lambda ctx: time.sleep(1.0) or [])
+              for i in range(20)]
+    report = run_scan(server.url, {"allow_private": True, "min_interval": 0}, checks=checks, timeout=0.3)
+    live = [t for t in threading.enumerate() if t.name.startswith("webscan-check") and t.is_alive()]
+    assert len(live) <= runner.MAX_WORKERS
+    assert len(report.results) == 20 and all(r.status == "error" for r in report.results)
+
+
+def test_unstarted_checks_are_not_run_after_the_deadline(server):
+    ran = []
+    checks = [NS(ID=f"slow.{i:02d}", CATEGORY="T", OPT_IN=None,
+                 run=lambda ctx, i=i: ran.append(i) or time.sleep(0.8) or []) for i in range(20)]
+    run_scan(server.url, {"allow_private": True, "min_interval": 0}, checks=checks, timeout=0.2)
+    time.sleep(1.2)  # let the abandoned workers finish their current check
+    assert len(ran) <= 8  # nothing beyond the first worker batch was ever started
