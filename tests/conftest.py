@@ -26,3 +26,16 @@ def fake_dns(monkeypatch):
 
     monkeypatch.setattr(socket, "getaddrinfo", fake)
     return mapping
+
+
+from webscan.core.context import build_context  # noqa: E402
+
+
+@pytest.fixture
+def ctx_for():
+    def make(server, **options):
+        opts = {"allow_private": True, "min_interval": 0}
+        opts.update(options)
+        return build_context(server.url, opts)
+
+    return make
