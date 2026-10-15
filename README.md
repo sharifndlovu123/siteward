@@ -1,4 +1,4 @@
-# webscan
+# siteward
 
 A small, self-hostable **passive** web security scanner. Give it a URL, it runs a set of standard checks and shows you the findings; export them as JSON, Markdown, or a self-contained HTML file. **Nothing about scanned sites is stored.**
 
@@ -14,22 +14,22 @@ Active tests (XSS/injection probes) are planned for v2 behind an ownership check
 
 ```bash
 pip install .                      # Python 3.11+
-webscan scan https://example.com   # Markdown report to stdout
-webscan scan https://example.com --format html --out report.html
-webscan scan https://example.com --ports --fail-on medium   # exit 1 if medium+ findings (CI-friendly)
+siteward scan https://example.com   # Markdown report to stdout
+siteward scan https://example.com --format html --out report.html
+siteward scan https://example.com --ports --fail-on medium   # exit 1 if medium+ findings (CI-friendly)
 ```
 
 Web UI (local):
 
 ```bash
-DEBUG=1 django-admin runserver --settings=webscan.web.settings
+DEBUG=1 django-admin runserver --settings=siteward.web.settings
 ```
 
 Docker:
 
 ```bash
-docker build -t webscan .
-docker run -p 8000:8000 -e SECRET_KEY=change-me -e ALLOWED_HOSTS=localhost webscan
+docker build -t siteward .
+docker run -p 8000:8000 -e SECRET_KEY=change-me -e ALLOWED_HOSTS=localhost siteward
 ```
 
 The web app has **no login**. Run it on localhost, or behind your own auth/VPN, or use the public-mode setup below.
@@ -45,10 +45,10 @@ One container behind Cloudflare, with `PUBLIC_MODE=1`. Required env vars: `TURNS
 Public mode: Turnstile on the form, per-IP (5/h) and per-target (3/h) limits, max 2 concurrent scans, the port check forced off, private targets always refused, and a minimal abuse log (`time, IP, keyed hash of target, options, outcome`; 30 days). To answer an abuse report ("example.com was scanned at 14:02"):
 
 ```bash
-ABUSE_LOG_KEY=... python -m webscan.web.abuse /var/log/webscan example.com
+ABUSE_LOG_KEY=... python -m siteward.web.abuse /var/log/siteward example.com
 ```
 
-Behind Cloudflare also add a WAF rate-limiting rule for the scan form (free tier) as the first line of defence. Mount `/var/log/webscan` as the only writable volume.
+Behind Cloudflare also add a WAF rate-limiting rule for the scan form (free tier) as the first line of defence. Mount `/var/log/siteward` as the only writable volume.
 
 ## Settings
 
@@ -66,7 +66,7 @@ Behind Cloudflare also add a WAF rate-limiting rule for the scan form (free tier
 
 ## Themes
 
-The default skin is Bootstrap 5 (MIT, vendored). If you own a licence for the commercial DashLite template, copy **your original, unmodified** package's CSS/fonts/images into `webscan/web/static/theme/dashlite/` (so `css/dashlite.css` exists) and set `THEME=dashlite`. That folder is git-ignored; do not redistribute DashLite files.
+The default skin is Bootstrap 5 (MIT, vendored). If you own a licence for the commercial DashLite template, copy **your original, unmodified** package's CSS/fonts/images into `siteward/web/static/theme/dashlite/` (so `css/dashlite.css` exists) and set `THEME=dashlite`. That folder is git-ignored; do not redistribute DashLite files.
 
 ## Known limits
 

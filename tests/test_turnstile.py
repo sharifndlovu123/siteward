@@ -1,6 +1,6 @@
 import httpx
 
-from webscan.web.turnstile import verify
+from siteward.web.turnstile import verify
 
 
 class Resp:

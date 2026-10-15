@@ -1,5 +1,5 @@
-from webscan.core.models import CheckResult
-from webscan.web.store import Store
+from siteward.core.models import CheckResult
+from siteward.web.store import Store
 
 
 class Clock:

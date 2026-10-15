@@ -1,4 +1,4 @@
-from webscan.checks import exposure
+from siteward.checks import exposure
 
 
 def ids(findings):

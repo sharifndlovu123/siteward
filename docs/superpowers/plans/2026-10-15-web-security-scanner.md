@@ -1,8 +1,8 @@
-# webscan v1 Implementation Plan
+# siteward v1 Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build `webscan`, a small open-source Python tool that runs passive security checks (plus an opt-in port check) against a URL and shows/exports the findings, via a CLI and a Django web UI, storing nothing about scanned sites.
+**Goal:** Build `siteward`, a small open-source Python tool that runs passive security checks (plus an opt-in port check) against a URL and shows/exports the findings, via a CLI and a Django web UI, storing nothing about scanned sites.
 
 **Architecture:** A framework-free scanner (`core/` + `checks/` + `reports/`) that both a Typer CLI and a database-less Django app call. Checks are one-module plugins discovered at runtime. The web app keeps results in an in-memory TTL store, runs scans in background threads, and (in public mode) adds layered in-memory rate limiting, Turnstile, and a minimal HMAC-keyed abuse log.
 
@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Python `>=3.11`; package name `webscan`; MIT licence; copyright "DevBridge (Pty) Ltd".
+- Python `>=3.11`; package name `siteward`; MIT licence; copyright "DevBridge (Pty) Ltd".
 - Runtime dependencies are limited to: `django`, `httpx`, `dnspython`, `jinja2`, `typer` (with a `click>=8.2` floor), `whitenoise`, `gunicorn`. Dev: `pytest`, `pytest-django`. Add nothing else.
 - **No database and no scan data on disk.** Django has `DATABASES = {}`; no sessions/auth apps. Results live in process memory only (TTL 15 min, max 20 entries).
 - Default scans are **passive**. The port check is opt-in (`ports` option) and **forced off in `PUBLIC_MODE`**.
@@ -21,7 +21,7 @@
 - Finding evidence must **never contain secret values** (e.g. contents of `.env`, cookie values).
 - Logs never contain target URLs, findings, evidence, or reports. The only exception is the abuse log: `{ts, client_ip, target_hmac, options, outcome}`, 30-day retention.
 - Tests must not touch the internet (use the local fake server, `httpx.MockTransport`, and monkeypatched DNS).
-- DashLite (commercial) files are never committed; `webscan/web/static/theme/dashlite/` is git-ignored.
+- DashLite (commercial) files are never committed; `siteward/web/static/theme/dashlite/` is git-ignored.
 - Commits: use `git commit -m "<message>" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"`.
 
 ## Review Focus
@@ -40,7 +40,7 @@ Inputs the spec implies but that are easy to get wrong; each has a pinning test 
 
 ```
 pyproject.toml  LICENSE  README.md  CONTRIBUTING.md  SECURITY.md  Dockerfile  .gitignore
-webscan/
+siteward/
   __init__.py                 __version__
   core/
     models.py                 Finding, CheckResult, ScanReport, Skip, SEVERITIES, severity_rank
@@ -70,10 +70,10 @@ tests/
 ### Task 1: Project scaffold
 
 **Files:**
-- Create: `pyproject.toml`, `LICENSE`, `.gitignore`, `README.md` (stub), `webscan/__init__.py`, `webscan/core/__init__.py`, `webscan/checks/__init__.py`, `webscan/reports/__init__.py` (empty for now), `webscan/cli/__init__.py`, `webscan/web/__init__.py`, `tests/__init__.py`
+- Create: `pyproject.toml`, `LICENSE`, `.gitignore`, `README.md` (stub), `siteward/__init__.py`, `siteward/core/__init__.py`, `siteward/checks/__init__.py`, `siteward/reports/__init__.py` (empty for now), `siteward/cli/__init__.py`, `siteward/web/__init__.py`, `tests/__init__.py`
 
 **Interfaces:**
-- Produces: importable package `webscan` with `webscan.__version__ == "0.1.0"`; a venv with dev dependencies installed; a git repo.
+- Produces: importable package `siteward` with `siteward.__version__ == "0.1.0"`; a venv with dev dependencies installed; a git repo.
 
 - [ ] **Step 1: Initialise git and the virtualenv**
 
@@ -91,7 +91,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "webscan"
+name = "siteward"
 version = "0.1.0"
 description = "Small, self-hostable passive web security scanner"
 readme = "README.md"
@@ -112,17 +112,17 @@ dependencies = [
 dev = ["pytest>=8", "pytest-django>=4.8"]
 
 [project.scripts]
-webscan = "webscan.cli.main:app"
+siteward = "siteward.cli.main:app"
 
 [tool.setuptools.packages.find]
-include = ["webscan*"]
+include = ["siteward*"]
 
 [tool.setuptools.package-data]
-webscan = ["reports/*.j2", "web/templates/**/*", "web/static/**/*"]
+siteward = ["reports/*.j2", "web/templates/**/*", "web/static/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-DJANGO_SETTINGS_MODULE = "webscan.web.settings"
+DJANGO_SETTINGS_MODULE = "siteward.web.settings"
 ```
 
 - [ ] **Step 3: Write `.gitignore`, `LICENSE`, stub `README.md`, package inits**
@@ -137,7 +137,7 @@ staticfiles/
 *.log
 .env
 # Commercial theme: never commit (see README "Themes")
-webscan/web/static/theme/dashlite/
+siteward/web/static/theme/dashlite/
 ```
 
 `LICENSE`:
@@ -165,16 +165,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-`README.md`: `# webscan` followed by one line `Work in progress; full docs land in the final task.`
+`README.md`: `# siteward` followed by one line `Work in progress; full docs land in the final task.`
 
-`webscan/__init__.py`: `__version__ = "0.1.0"`. All other `__init__.py` files and `tests/__init__.py`: empty.
+`siteward/__init__.py`: `__version__ = "0.1.0"`. All other `__init__.py` files and `tests/__init__.py`: empty.
 
 - [ ] **Step 4: Install and verify**
 
 ```bash
 . .venv/bin/activate
 pip install -e '.[dev]'
-python -c "import webscan; print(webscan.__version__)"
+python -c "import siteward; print(siteward.__version__)"
 pytest -q
 ```
 Expected: prints `0.1.0`; pytest reports `no tests ran` (exit code 5 is fine here).
@@ -191,7 +191,7 @@ git commit -m "chore: project scaffold, licence, docs" -m "Co-Authored-By: Claud
 ### Task 2: Core data models
 
 **Files:**
-- Create: `webscan/core/models.py`
+- Create: `siteward/core/models.py`
 - Test: `tests/test_models.py`
 
 **Interfaces:**
@@ -211,7 +211,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from webscan.core.models import CheckResult, Finding, ScanReport, severity_rank
+from siteward.core.models import CheckResult, Finding, ScanReport, severity_rank
 
 NOW = datetime(2026, 10, 15, 12, 0, tzinfo=timezone.utc)
 
@@ -269,11 +269,11 @@ def test_to_dict_is_json_serialisable():
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `pytest tests/test_models.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'webscan.core.models'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'siteward.core.models'`
 
 - [ ] **Step 3: Implement**
 
-`webscan/core/models.py`:
+`siteward/core/models.py`:
 ```python
 """Plain data types shared by every layer. No framework imports."""
 from __future__ import annotations
@@ -378,7 +378,7 @@ Expected: all PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add webscan/core/models.py tests/test_models.py
+git add siteward/core/models.py tests/test_models.py
 git commit -m "feat(core): finding, check result and report models" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
@@ -387,11 +387,11 @@ git commit -m "feat(core): finding, check result and report models" -m "Co-Autho
 ### Task 3: Test fixtures and `netguard` (the safety layer)
 
 **Files:**
-- Create: `tests/fake_server.py`, `tests/conftest.py`, `webscan/core/netguard.py`
+- Create: `tests/fake_server.py`, `tests/conftest.py`, `siteward/core/netguard.py`
 - Test: `tests/test_netguard.py`
 
 **Interfaces:**
-- Produces (`webscan.core.netguard`):
+- Produces (`siteward.core.netguard`):
   - `USER_AGENT: str`, `MAX_BODY = 2*1024*1024`, `MAX_REDIRECTS = 5`
   - `class BlockedTarget(ValueError)`, `class FetchError(Exception)`
   - `@dataclass(frozen=True) Target(url, scheme, host, port, ips: tuple[str, ...])`
@@ -512,7 +512,7 @@ import time
 import httpx
 import pytest
 
-from webscan.core.netguard import (
+from siteward.core.netguard import (
     MAX_BODY,
     BlockedTarget,
     FetchError,
@@ -654,11 +654,11 @@ def test_real_local_request_needs_allow_private(server):
 - [ ] **Step 3: Run to verify it fails**
 
 Run: `pytest tests/test_netguard.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'webscan.core.netguard'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'siteward.core.netguard'`
 
 - [ ] **Step 4: Implement**
 
-`webscan/core/netguard.py`:
+`siteward/core/netguard.py`:
 ```python
 """Safety layer: every outbound request in the project goes through here.
 
@@ -676,7 +676,7 @@ from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import httpx
 
-USER_AGENT = "webscan/0.1 (passive security scanner)"
+USER_AGENT = "siteward/0.1 (passive security scanner)"
 MAX_BODY = 2 * 1024 * 1024
 MAX_REDIRECTS = 5
 _REDIRECT_STATUSES = (301, 302, 303, 307, 308)
@@ -816,7 +816,7 @@ Run: `pytest tests/test_netguard.py -v`
 Expected: all PASS
 
 ```bash
-git add tests/fake_server.py tests/conftest.py webscan/core/netguard.py tests/test_netguard.py
+git add tests/fake_server.py tests/conftest.py siteward/core/netguard.py tests/test_netguard.py
 git commit -m "feat(core): netguard safety layer and test fixtures" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
@@ -825,7 +825,7 @@ git commit -m "feat(core): netguard safety layer and test fixtures" -m "Co-Autho
 ### Task 4: Scan context and runner
 
 **Files:**
-- Create: `webscan/core/context.py`, `webscan/core/runner.py`
+- Create: `siteward/core/context.py`, `siteward/core/runner.py`
 - Modify: `tests/conftest.py` (add `ctx_for` fixture)
 - Test: `tests/test_runner.py`
 
@@ -835,7 +835,7 @@ git commit -m "feat(core): netguard safety layer and test fixtures" -m "Co-Autho
   - `ScanContext(target: Target, client: GuardedClient, baseline: Fetch, options: dict)`
   - `build_context(url, options=None, client=None) -> ScanContext`; options keys used: `allow_private`, `min_interval`, `ports`. May raise `BlockedTarget` / `FetchError`.
   - `class ScanError(Exception)`
-  - `discover_checks() -> list[module]`: modules in `webscan.checks` that define `ID`, `CATEGORY`, `OPT_IN` (None or an option name) and `run(ctx) -> list[Finding]`
+  - `discover_checks() -> list[module]`: modules in `siteward.checks` that define `ID`, `CATEGORY`, `OPT_IN` (None or an option name) and `run(ctx) -> list[Finding]`
   - `run_scan(url, options=None, on_result=None, checks=None, timeout=60.0, client=None) -> ScanReport`; raises `BlockedTarget` (refused) or `ScanError` (unreachable). Checks that raise become `error` results, `Skip` becomes `skipped`, disabled opt-in checks become `skipped`, unfinished checks at timeout become `error`.
   - fixture `ctx_for(server, **options) -> ScanContext` (allow_private on, no pacing).
 
@@ -843,7 +843,7 @@ git commit -m "feat(core): netguard safety layer and test fixtures" -m "Co-Autho
 
 Append to `tests/conftest.py`:
 ```python
-from webscan.core.context import build_context  # noqa: E402
+from siteward.core.context import build_context  # noqa: E402
 
 
 @pytest.fixture
@@ -866,9 +866,9 @@ from types import SimpleNamespace as NS
 
 import pytest
 
-from webscan.core.models import Finding, Skip
-from webscan.core.netguard import BlockedTarget
-from webscan.core.runner import ScanError, run_scan
+from siteward.core.models import Finding, Skip
+from siteward.core.netguard import BlockedTarget
+from siteward.core.runner import ScanError, run_scan
 
 OPTS = {"allow_private": True, "min_interval": 0}
 
@@ -957,11 +957,11 @@ def test_private_target_refused_without_allow_private(server):
 - [ ] **Step 3: Run to verify it fails**
 
 Run: `pytest tests/test_runner.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'webscan.core.context'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'siteward.core.context'`
 
 - [ ] **Step 4: Implement**
 
-`webscan/core/context.py`:
+`siteward/core/context.py`:
 ```python
 from __future__ import annotations
 
@@ -988,7 +988,7 @@ def build_context(url: str, options: dict | None = None, client: GuardedClient |
     return ScanContext(target, client, baseline, options)
 ```
 
-`webscan/core/runner.py`:
+`siteward/core/runner.py`:
 ```python
 from __future__ import annotations
 
@@ -998,7 +998,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from concurrent.futures import TimeoutError as FuturesTimeout
 from datetime import datetime, timezone
 
-from webscan import __version__
+from siteward import __version__
 
 from .context import build_context
 from .models import CheckResult, ScanReport, Skip
@@ -1012,7 +1012,7 @@ class ScanError(Exception):
 
 
 def discover_checks() -> list:
-    import webscan.checks as package
+    import siteward.checks as package
 
     modules = []
     for info in pkgutil.iter_modules(package.__path__):
@@ -1084,7 +1084,7 @@ Run: `pytest tests/test_runner.py -v`
 Expected: all PASS
 
 ```bash
-git add webscan/core/context.py webscan/core/runner.py tests/conftest.py tests/test_runner.py
+git add siteward/core/context.py siteward/core/runner.py tests/conftest.py tests/test_runner.py
 git commit -m "feat(core): scan context and concurrent runner" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
@@ -1093,7 +1093,7 @@ git commit -m "feat(core): scan context and concurrent runner" -m "Co-Authored-B
 ### Task 5: Checks A — headers, cookies, CORS, leakage, HTTPS redirect, policy files
 
 **Files:**
-- Create: `webscan/checks/headers.py`, `cookies.py`, `cors.py`, `leakage.py`, `redirect_https.py`, `policy_files.py`
+- Create: `siteward/checks/headers.py`, `cookies.py`, `cors.py`, `leakage.py`, `redirect_https.py`, `policy_files.py`
 - Test: `tests/test_check_headers.py`, `test_check_cookies.py`, `test_check_cors.py`, `test_check_leakage.py`, `test_check_redirect_https.py`, `test_check_policy_files.py`
 
 **Interfaces:**
@@ -1104,7 +1104,7 @@ git commit -m "feat(core): scan context and concurrent runner" -m "Co-Authored-B
 
 `tests/test_check_headers.py`:
 ```python
-from webscan.checks import headers
+from siteward.checks import headers
 
 GOOD = [
     ("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none'"),
@@ -1143,7 +1143,7 @@ def test_weak_csp_is_flagged_with_evidence(server, ctx_for):
 
 `tests/test_check_cookies.py`:
 ```python
-from webscan.checks import cookies
+from siteward.checks import cookies
 
 
 def test_session_cookie_without_flags(server, ctx_for):
@@ -1172,7 +1172,7 @@ def test_no_cookies_no_findings(server, ctx_for):
 
 `tests/test_check_cors.py`:
 ```python
-from webscan.checks import cors
+from siteward.checks import cors
 
 
 def test_reflected_origin_with_credentials_is_high(server, ctx_for):
@@ -1203,7 +1203,7 @@ def test_probe_sends_origin_header(server, ctx_for):
 
 `tests/test_check_leakage.py`:
 ```python
-from webscan.checks import leakage
+from siteward.checks import leakage
 
 
 def ids(findings):
@@ -1233,8 +1233,8 @@ from types import SimpleNamespace as NS
 
 import httpx
 
-from webscan.checks import redirect_https
-from webscan.core.netguard import Fetch, FetchError
+from siteward.checks import redirect_https
+from siteward.core.netguard import Fetch, FetchError
 
 
 def test_plain_http_without_redirect_is_flagged(server, ctx_for):
@@ -1262,7 +1262,7 @@ def test_nothing_listening_on_port_80_passes():
 
 `tests/test_check_policy_files.py`:
 ```python
-from webscan.checks import policy_files
+from siteward.checks import policy_files
 
 
 def ids(findings):
@@ -1295,15 +1295,15 @@ def test_robots_listing_sensitive_paths(server, ctx_for):
 - [ ] **Step 2: Run to verify they fail**
 
 Run: `pytest tests/test_check_headers.py tests/test_check_cookies.py tests/test_check_cors.py tests/test_check_leakage.py tests/test_check_redirect_https.py tests/test_check_policy_files.py -v`
-Expected: FAIL with `ImportError` for `webscan.checks.*`
+Expected: FAIL with `ImportError` for `siteward.checks.*`
 
 - [ ] **Step 3: Implement the six checks**
 
-`webscan/checks/headers.py`:
+`siteward/checks/headers.py`:
 ```python
 import re
 
-from webscan.core.models import Finding
+from siteward.core.models import Finding
 
 ID = "headers.security"
 CATEGORY = "Headers"
@@ -1354,11 +1354,11 @@ def run(ctx):
     return out
 ```
 
-`webscan/checks/cookies.py`:
+`siteward/checks/cookies.py`:
 ```python
 import re
 
-from webscan.core.models import Finding
+from siteward.core.models import Finding
 
 ID = "cookies.flags"
 CATEGORY = "Cookies"
@@ -1392,14 +1392,14 @@ def run(ctx):
     return out
 ```
 
-`webscan/checks/cors.py`:
+`siteward/checks/cors.py`:
 ```python
-from webscan.core.models import Finding
+from siteward.core.models import Finding
 
 ID = "cors.policy"
 CATEGORY = "CORS"
 OPT_IN = None
-PROBE_ORIGIN = "https://webscan-cors-probe.example"
+PROBE_ORIGIN = "https://siteward-cors-probe.example"
 
 
 def run(ctx):
@@ -1420,16 +1420,16 @@ def run(ctx):
     return []
 ```
 
-`webscan/checks/leakage.py`:
+`siteward/checks/leakage.py`:
 ```python
 import re
 
-from webscan.core.models import Finding
+from siteward.core.models import Finding
 
 ID = "leakage.banner"
 CATEGORY = "Information leakage"
 OPT_IN = None
-PROBE_PATH = "/webscan-not-found-probe"
+PROBE_PATH = "/siteward-not-found-probe"
 _VERSIONED = re.compile(r"\d+\.\d+")
 _TRACE_MARKERS = ("Traceback (most recent call last)", "Stack trace:", "at java.", "Fatal error:", "SQLSTATE", "Whoops!")
 
@@ -1453,10 +1453,10 @@ def run(ctx):
     return out
 ```
 
-`webscan/checks/redirect_https.py`:
+`siteward/checks/redirect_https.py`:
 ```python
-from webscan.core.models import Finding
-from webscan.core.netguard import FetchError
+from siteward.core.models import Finding
+from siteward.core.netguard import FetchError
 
 ID = "transport.https-redirect"
 CATEGORY = "Transport"
@@ -1481,11 +1481,11 @@ def run(ctx):
                     f"GET {url} -> {fetch.status}", "Redirect all HTTP requests to HTTPS (301).")]
 ```
 
-`webscan/checks/policy_files.py`:
+`siteward/checks/policy_files.py`:
 ```python
 import re
 
-from webscan.core.models import Finding
+from siteward.core.models import Finding
 
 ID = "policy.files"
 CATEGORY = "Policy files"
@@ -1527,7 +1527,7 @@ Expected: all PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add webscan/checks tests/test_check_*.py
+git add siteward/checks tests/test_check_*.py
 git commit -m "feat(checks): headers, cookies, CORS, leakage, HTTPS redirect, policy files" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
@@ -1536,7 +1536,7 @@ git commit -m "feat(checks): headers, cookies, CORS, leakage, HTTPS redirect, po
 ### Task 6: Checks B — exposure, TLS, DNS email, takeover, ports
 
 **Files:**
-- Create: `webscan/checks/exposure.py`, `tls.py`, `dns_email.py`, `takeover.py`, `ports.py`
+- Create: `siteward/checks/exposure.py`, `tls.py`, `dns_email.py`, `takeover.py`, `ports.py`
 - Test: `tests/test_check_exposure.py`, `test_check_tls.py`, `test_check_dns_email.py`, `test_check_takeover.py`, `test_check_ports.py`
 
 **Interfaces:**
@@ -1547,7 +1547,7 @@ git commit -m "feat(checks): headers, cookies, CORS, leakage, HTTPS redirect, po
 
 `tests/test_check_exposure.py`:
 ```python
-from webscan.checks import exposure
+from siteward.checks import exposure
 
 
 def ids(findings):
@@ -1591,8 +1591,8 @@ from types import SimpleNamespace as NS
 
 import pytest
 
-from webscan.checks import tls
-from webscan.core.models import Skip
+from siteward.checks import tls
+from siteward.core.models import Skip
 
 
 def at(text):
@@ -1632,8 +1632,8 @@ from types import SimpleNamespace as NS
 
 import pytest
 
-from webscan.checks import dns_email
-from webscan.core.models import Skip
+from siteward.checks import dns_email
+from siteward.core.models import Skip
 
 
 def ids(findings):
@@ -1678,8 +1678,8 @@ from types import SimpleNamespace as NS
 
 import pytest
 
-from webscan.checks import takeover
-from webscan.core.models import Skip
+from siteward.checks import takeover
+from siteward.core.models import Skip
 
 
 def ctx(host="shop.example.com", body=""):
@@ -1720,7 +1720,7 @@ def test_ip_targets_are_skipped():
 ```python
 import socket
 
-from webscan.checks import ports
+from siteward.checks import ports
 
 
 def test_open_port_is_reported_and_closed_is_not(server, ctx_for, monkeypatch):
@@ -1753,12 +1753,12 @@ Expected: FAIL with `ImportError` for the new modules
 
 - [ ] **Step 3: Implement the five checks**
 
-`webscan/checks/exposure.py`:
+`siteward/checks/exposure.py`:
 ```python
 import re
 
-from webscan.core.models import Finding
-from webscan.core.netguard import FetchError
+from siteward.core.models import Finding
+from siteward.core.netguard import FetchError
 
 ID = "exposure.files"
 CATEGORY = "Exposed files"
@@ -1840,13 +1840,13 @@ def run(ctx):
     return out
 ```
 
-`webscan/checks/tls.py`:
+`siteward/checks/tls.py`:
 ```python
 import socket
 import ssl
 import time
 
-from webscan.core.models import Finding, Skip
+from siteward.core.models import Finding, Skip
 
 ID = "tls.certificate"
 CATEGORY = "TLS"
@@ -1916,7 +1916,7 @@ def run(ctx):
     return out
 ```
 
-`webscan/checks/dns_email.py`:
+`siteward/checks/dns_email.py`:
 ```python
 import ipaddress
 import re
@@ -1924,7 +1924,7 @@ import re
 import dns.exception
 import dns.resolver
 
-from webscan.core.models import Finding, Skip
+from siteward.core.models import Finding, Skip
 
 ID = "dns.email"
 CATEGORY = "DNS / Email"
@@ -2000,14 +2000,14 @@ def run(ctx):
     return assess(spf, dmarc, dkim_found)
 ```
 
-`webscan/checks/takeover.py`:
+`siteward/checks/takeover.py`:
 ```python
 import ipaddress
 
 import dns.exception
 import dns.resolver
 
-from webscan.core.models import Finding, Skip
+from siteward.core.models import Finding, Skip
 
 ID = "dns.takeover"
 CATEGORY = "DNS / Email"
@@ -2064,12 +2064,12 @@ def run(ctx):
     return []
 ```
 
-`webscan/checks/ports.py`:
+`siteward/checks/ports.py`:
 ```python
 import socket
 from concurrent.futures import ThreadPoolExecutor
 
-from webscan.core.models import Finding
+from siteward.core.models import Finding
 
 ID = "ports.common"
 CATEGORY = "Network"
@@ -2120,7 +2120,7 @@ Expected: all PASS
 Append to `tests/test_runner.py`:
 ```python
 def test_all_builtin_checks_are_discovered():
-    from webscan.core.runner import discover_checks
+    from siteward.core.runner import discover_checks
 
     ids = {m.ID for m in discover_checks()}
     assert ids >= {
@@ -2131,7 +2131,7 @@ def test_all_builtin_checks_are_discovered():
 Run: `pytest -q` — Expected: all PASS.
 
 ```bash
-git add webscan/checks tests
+git add siteward/checks tests
 git commit -m "feat(checks): exposure, TLS, email DNS, takeover and opt-in port checks" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
@@ -2140,8 +2140,8 @@ git commit -m "feat(checks): exposure, TLS, email DNS, takeover and opt-in port 
 ### Task 7: Report exporters (JSON, Markdown, HTML)
 
 **Files:**
-- Create: `webscan/reports/json_report.py`, `markdown_report.py`, `html_report.py`, `report.html.j2`
-- Modify: `webscan/reports/__init__.py`, `tests/conftest.py` (add `sample_report`)
+- Create: `siteward/reports/json_report.py`, `markdown_report.py`, `html_report.py`, `report.html.j2`
+- Modify: `siteward/reports/__init__.py`, `tests/conftest.py` (add `sample_report`)
 - Test: `tests/test_reports.py`
 
 **Interfaces:**
@@ -2154,7 +2154,7 @@ Append to `tests/conftest.py`:
 ```python
 from datetime import datetime, timezone  # noqa: E402
 
-from webscan.core.models import CheckResult, Finding, ScanReport  # noqa: E402
+from siteward.core.models import CheckResult, Finding, ScanReport  # noqa: E402
 
 HOSTILE = "<script>alert(1)</script>"
 
@@ -2181,7 +2181,7 @@ import json
 
 import pytest
 
-from webscan.reports import FORMATS, render, to_html, to_json, to_markdown
+from siteward.reports import FORMATS, render, to_html, to_json, to_markdown
 
 
 def test_json_roundtrips(sample_report):
@@ -2229,11 +2229,11 @@ def test_render_dispatch_and_formats(sample_report):
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `pytest tests/test_reports.py -v`
-Expected: FAIL with `ImportError: cannot import name 'FORMATS' from 'webscan.reports'`
+Expected: FAIL with `ImportError: cannot import name 'FORMATS' from 'siteward.reports'`
 
 - [ ] **Step 3: Implement**
 
-`webscan/reports/json_report.py`:
+`siteward/reports/json_report.py`:
 ```python
 import json
 
@@ -2242,11 +2242,11 @@ def to_json(report) -> str:
     return json.dumps(report.to_dict(), indent=2, ensure_ascii=False)
 ```
 
-`webscan/reports/markdown_report.py`:
+`siteward/reports/markdown_report.py`:
 ```python
 import re
 
-from webscan.core.models import SEVERITIES
+from siteward.core.models import SEVERITIES
 
 _SPECIAL = re.compile(r"([\\`*_\[\]<>|#~])")
 
@@ -2269,7 +2269,7 @@ def to_markdown(report) -> str:
         "",
         f"- **Grade:** {d['grade']}" + (" (incomplete: some checks errored)" if d["incomplete"] else ""),
         f"- **Scanned:** {d['started']}",
-        f"- **Tool:** webscan {d['version']} (port check: {'on' if d['options'].get('ports') else 'off'})",
+        f"- **Tool:** siteward {d['version']} (port check: {'on' if d['options'].get('ports') else 'off'})",
         "- **Counts:** " + ", ".join(f"{s} {d['counts'][s]}" for s in reversed(SEVERITIES)),
         "",
         "## Findings",
@@ -2296,13 +2296,13 @@ def to_markdown(report) -> str:
     return "\n".join(lines)
 ```
 
-`webscan/reports/html_report.py`:
+`siteward/reports/html_report.py`:
 ```python
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
-from webscan.core.models import SEVERITIES
+from siteward.core.models import SEVERITIES
 
 _env = Environment(loader=FileSystemLoader(str(Path(__file__).parent)), autoescape=True)
 
@@ -2320,7 +2320,7 @@ def to_html(report) -> str:
     )
 ```
 
-`webscan/reports/report.html.j2`:
+`siteward/reports/report.html.j2`:
 ```html
 <!doctype html>
 <html lang="en">
@@ -2346,7 +2346,7 @@ def to_html(report) -> str:
 </head>
 <body>
 <h1>Security scan: {{ r.target }}</h1>
-<p class="meta">Scanned {{ r.started }} &middot; webscan {{ r.version }} &middot; port check {{ 'on' if r.options.ports else 'off' }}</p>
+<p class="meta">Scanned {{ r.started }} &middot; siteward {{ r.version }} &middot; port check {{ 'on' if r.options.ports else 'off' }}</p>
 <p>Grade <span class="grade">{{ r.grade }}</span>{% if r.incomplete %} <strong>(incomplete: some checks errored)</strong>{% endif %}</p>
 <p class="counts">{% for s in severities %}<span class="sev-{{ s }}">{{ s }} {{ r.counts[s] }}</span>{% endfor %}</p>
 
@@ -2367,7 +2367,7 @@ def to_html(report) -> str:
 </html>
 ```
 
-`webscan/reports/__init__.py`:
+`siteward/reports/__init__.py`:
 ```python
 from .html_report import to_html
 from .json_report import to_json
@@ -2392,7 +2392,7 @@ Expected: all PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add webscan/reports tests/conftest.py tests/test_reports.py
+git add siteward/reports tests/conftest.py tests/test_reports.py
 git commit -m "feat(reports): JSON, Markdown and self-contained HTML exporters" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
@@ -2401,12 +2401,12 @@ git commit -m "feat(reports): JSON, Markdown and self-contained HTML exporters" 
 ### Task 8: CLI
 
 **Files:**
-- Create: `webscan/cli/main.py`
+- Create: `siteward/cli/main.py`
 - Test: `tests/test_cli.py`
 
 **Interfaces:**
 - Consumes: `run_scan`, `ScanError`, `BlockedTarget`, `render`, `FORMATS`, `severity_rank`, `SEVERITIES`.
-- Produces: Typer app `webscan.cli.main:app`; command `webscan scan URL [--ports] [--format json|md|html] [--out FILE] [--fail-on LEVEL] [--allow-private]`. Exit codes: `0` ok, `1` findings at/above `--fail-on` (default `high`; `never` disables), `2` refused/unreachable/bad option. Progress and the authorisation notice go to stderr; the report goes to stdout or `--out`.
+- Produces: Typer app `siteward.cli.main:app`; command `siteward scan URL [--ports] [--format json|md|html] [--out FILE] [--fail-on LEVEL] [--allow-private]`. Exit codes: `0` ok, `1` findings at/above `--fail-on` (default `high`; `never` disables), `2` refused/unreachable/bad option. Progress and the authorisation notice go to stderr; the report goes to stdout or `--out`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -2416,7 +2416,7 @@ import json
 
 from typer.testing import CliRunner
 
-from webscan.cli.main import app
+from siteward.cli.main import app
 
 runner = CliRunner()
 
@@ -2482,11 +2482,11 @@ def test_port_check_flag_enables_the_check(server):
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `pytest tests/test_cli.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'webscan.cli.main'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'siteward.cli.main'`
 
 - [ ] **Step 3: Implement**
 
-`webscan/cli/main.py`:
+`siteward/cli/main.py`:
 ```python
 from __future__ import annotations
 
@@ -2494,10 +2494,10 @@ from pathlib import Path
 
 import typer
 
-from webscan.core.models import SEVERITIES, severity_rank
-from webscan.core.netguard import BlockedTarget
-from webscan.core.runner import ScanError, run_scan
-from webscan.reports import FORMATS, render
+from siteward.core.models import SEVERITIES, severity_rank
+from siteward.core.netguard import BlockedTarget
+from siteward.core.runner import ScanError, run_scan
+from siteward.reports import FORMATS, render
 
 app = typer.Typer(add_completion=False, help="Passive web security scanner.")
 NOTICE = "Only scan sites you own or are authorised to test."
@@ -2505,7 +2505,7 @@ NOTICE = "Only scan sites you own or are authorised to test."
 
 @app.callback()
 def main():
-    """webscan: run passive security checks against a URL."""
+    """siteward: run passive security checks against a URL."""
 
 
 def _err(message: str):
@@ -2561,8 +2561,8 @@ Expected: all PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add webscan/cli/main.py tests/test_cli.py
-git commit -m "feat(cli): webscan scan command with report formats and CI exit codes" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+git add siteward/cli/main.py tests/test_cli.py
+git commit -m "feat(cli): siteward scan command with report formats and CI exit codes" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -2570,7 +2570,7 @@ git commit -m "feat(cli): webscan scan command with report formats and CI exit c
 ### Task 9a: Web support modules (store, limits, abuse log, Turnstile)
 
 **Files:**
-- Create: `webscan/web/store.py`, `limits.py`, `abuse.py`, `turnstile.py`
+- Create: `siteward/web/store.py`, `limits.py`, `abuse.py`, `turnstile.py`
 - Test: `tests/test_store.py`, `tests/test_limits.py`, `tests/test_abuse.py`, `tests/test_turnstile.py`
 
 **Interfaces:**
@@ -2585,7 +2585,7 @@ git commit -m "feat(cli): webscan scan command with report formats and CI exit c
 
 `tests/test_store.py`:
 ```python
-from webscan.web.store import Store
+from siteward.web.store import Store
 
 
 class Clock:
@@ -2638,7 +2638,7 @@ def test_stuck_running_entries_are_eventually_dropped():
 
 
 def test_partial_report_reflects_results_so_far():
-    from webscan.core.models import CheckResult
+    from siteward.core.models import CheckResult
 
     entry = Store().create("http://example.com/", {"ports": False})
     entry.results.append(CheckResult("a", "T", "passed"))
@@ -2648,7 +2648,7 @@ def test_partial_report_reflects_results_so_far():
 
 `tests/test_limits.py`:
 ```python
-from webscan.web.limits import SlidingWindow, Slots
+from siteward.web.limits import SlidingWindow, Slots
 
 
 class Clock:
@@ -2696,7 +2696,7 @@ import json
 import os
 from datetime import datetime, timezone
 
-from webscan.web.abuse import AbuseLog, lookup
+from siteward.web.abuse import AbuseLog, lookup
 
 
 class Clock:
@@ -2753,7 +2753,7 @@ def test_unwritable_directory_does_not_raise(tmp_path):
 ```python
 import httpx
 
-from webscan.web.turnstile import verify
+from siteward.web.turnstile import verify
 
 
 class Resp:
@@ -2788,11 +2788,11 @@ def test_failure_empty_token_and_errors():
 - [ ] **Step 2: Run to verify they fail**
 
 Run: `pytest tests/test_store.py tests/test_limits.py tests/test_abuse.py tests/test_turnstile.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'webscan.web.store'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'siteward.web.store'`
 
 - [ ] **Step 3: Implement**
 
-`webscan/web/store.py`:
+`siteward/web/store.py`:
 ```python
 """In-memory result store. Nothing here ever touches disk."""
 from __future__ import annotations
@@ -2802,8 +2802,8 @@ import threading
 import time
 from datetime import datetime, timezone
 
-from webscan import __version__
-from webscan.core.models import ScanReport
+from siteward import __version__
+from siteward.core.models import ScanReport
 
 _STUCK_AFTER = 3600
 
@@ -2859,7 +2859,7 @@ class Store:
             return self._entries.get(scan_id)
 ```
 
-`webscan/web/limits.py`:
+`siteward/web/limits.py`:
 ```python
 """In-memory rate limiting. Keys are HMAC'd so raw IPs/hostnames are not held in memory tables."""
 from __future__ import annotations
@@ -2918,7 +2918,7 @@ class Slots:
             self._n -= 1
 ```
 
-`webscan/web/abuse.py`:
+`siteward/web/abuse.py`:
 ```python
 """Minimal abuse log: who started a scan, never what was found."""
 from __future__ import annotations
@@ -2991,14 +2991,14 @@ def lookup(directory, key, host) -> list:
     return hits
 
 
-if __name__ == "__main__":  # python -m webscan.web.abuse DIRECTORY HOSTNAME   (key from ABUSE_LOG_KEY)
+if __name__ == "__main__":  # python -m siteward.web.abuse DIRECTORY HOSTNAME   (key from ABUSE_LOG_KEY)
     import os
 
     for hit in lookup(sys.argv[1], os.environ["ABUSE_LOG_KEY"], sys.argv[2]):
         print(json.dumps(hit))
 ```
 
-`webscan/web/turnstile.py`:
+`siteward/web/turnstile.py`:
 ```python
 import httpx
 
@@ -3023,7 +3023,7 @@ Expected: all PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add webscan/web/store.py webscan/web/limits.py webscan/web/abuse.py webscan/web/turnstile.py tests/test_store.py tests/test_limits.py tests/test_abuse.py tests/test_turnstile.py
+git add siteward/web/store.py siteward/web/limits.py siteward/web/abuse.py siteward/web/turnstile.py tests/test_store.py tests/test_limits.py tests/test_abuse.py tests/test_turnstile.py
 git commit -m "feat(web): ephemeral store, in-memory rate limits, abuse log, Turnstile verifier" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
@@ -3032,7 +3032,7 @@ git commit -m "feat(web): ephemeral store, in-memory rate limits, abuse log, Tur
 ### Task 9b: Django app (settings, state, views, templates)
 
 **Files:**
-- Create: `webscan/web/settings.py`, `urls.py`, `wsgi.py`, `state.py`, `views.py`, `context.py`, `templates/base_bootstrap.html`, `templates/index.html`, `templates/scan.html`, `templates/_results.html`, `templates/policy.html`, `static/js/poll.js`
+- Create: `siteward/web/settings.py`, `urls.py`, `wsgi.py`, `state.py`, `views.py`, `context.py`, `templates/base_bootstrap.html`, `templates/index.html`, `templates/scan.html`, `templates/_results.html`, `templates/policy.html`, `static/js/poll.js`
 - Test: `tests/test_web.py`
 
 **Interfaces:**
@@ -3055,7 +3055,7 @@ import time
 import pytest
 from django.urls import reverse
 
-from webscan.web import state, turnstile, views
+from siteward.web import state, turnstile, views
 
 
 @pytest.fixture(autouse=True)
@@ -3224,11 +3224,11 @@ def test_public_mode_still_refuses_private_targets(client, public, fake_dns):
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `pytest tests/test_web.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'webscan.web.settings'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'siteward.web.settings'`
 
 - [ ] **Step 3: Implement settings, urls, wsgi, state, context**
 
-`webscan/web/settings.py`:
+`siteward/web/settings.py`:
 ```python
 import os
 import secrets
@@ -3252,13 +3252,13 @@ SECRET_KEY = os.environ.get("SECRET_KEY") or secrets.token_urlsafe(50)  # no ses
 ALLOWED_HOSTS = [h for h in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h]
 CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o]
 
-# --- webscan -----------------------------------------------------------------------------------
+# --- siteward -----------------------------------------------------------------------------------
 PUBLIC_MODE = _bool("PUBLIC_MODE")
 TRUST_CF_HEADERS = _bool("TRUST_CF_HEADERS")
 TURNSTILE_SITE_KEY = os.environ.get("TURNSTILE_SITE_KEY", "")
 TURNSTILE_SECRET = os.environ.get("TURNSTILE_SECRET", "")
 ABUSE_LOG = _bool("ABUSE_LOG", default=PUBLIC_MODE)
-ABUSE_LOG_DIR = os.environ.get("ABUSE_LOG_DIR", "/var/log/webscan")
+ABUSE_LOG_DIR = os.environ.get("ABUSE_LOG_DIR", "/var/log/siteward")
 ABUSE_LOG_KEY = os.environ.get("ABUSE_LOG_KEY", "")
 ABUSE_LOG_RETENTION_DAYS = _int("ABUSE_LOG_RETENTION_DAYS", 30)
 RATE_PER_IP = _int("RATE_PER_IP", 5)
@@ -3288,14 +3288,14 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "webscan.web.middleware.SecurityHeadersMiddleware",
+    "siteward.web.middleware.SecurityHeadersMiddleware",
 ]
-ROOT_URLCONF = "webscan.web.urls"
-WSGI_APPLICATION = "webscan.web.wsgi.application"
+ROOT_URLCONF = "siteward.web.urls"
+WSGI_APPLICATION = "siteward.web.wsgi.application"
 TEMPLATES = [{
     "BACKEND": "django.template.backends.django.DjangoTemplates",
     "DIRS": [BASE_DIR / "templates"],
-    "OPTIONS": {"context_processors": ["django.template.context_processors.request", "webscan.web.context.theme"]},
+    "OPTIONS": {"context_processors": ["django.template.context_processors.request", "siteward.web.context.theme"]},
 }]
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
@@ -3307,17 +3307,17 @@ X_FRAME_OPTIONS = "DENY"
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 LOGGING = {"version": 1, "disable_existing_loggers": False, "root": {"level": "WARNING"}}
 ```
-`webscan/web/wsgi.py`:
+`siteward/web/wsgi.py`:
 ```python
 import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "webscan.web.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "siteward.web.settings")
 application = get_wsgi_application()
 ```
 
-`webscan/web/urls.py`:
+`siteward/web/urls.py`:
 ```python
 from django.urls import path
 
@@ -3332,7 +3332,7 @@ urlpatterns = [
 ]
 ```
 
-`webscan/web/state.py`:
+`siteward/web/state.py`:
 ```python
 """Process-wide singletons, built lazily from settings (tests call reset())."""
 import os
@@ -3341,7 +3341,7 @@ from dataclasses import dataclass
 
 from django.conf import settings
 
-from webscan.core.runner import discover_checks
+from siteward.core.runner import discover_checks
 
 from .abuse import AbuseLog
 from .limits import SlidingWindow, Slots
@@ -3384,7 +3384,7 @@ def reset():
         _state = None
 ```
 
-`webscan/web/context.py`:
+`siteward/web/context.py`:
 ```python
 from django.conf import settings
 
@@ -3403,7 +3403,7 @@ def theme(request):
 
 - [ ] **Step 4: Implement views, middleware, templates, JS**
 
-`webscan/web/middleware.py`:
+`siteward/web/middleware.py`:
 ```python
 CSP = ("default-src 'self'; script-src 'self' https://challenges.cloudflare.com; "
        "frame-src https://challenges.cloudflare.com; style-src 'self'; img-src 'self' data:; "
@@ -3422,7 +3422,7 @@ class SecurityHeadersMiddleware:
         return response
 ```
 
-`webscan/web/views.py`:
+`siteward/web/views.py`:
 ```python
 from __future__ import annotations
 
@@ -3437,10 +3437,10 @@ from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_http_methods
 
-from webscan.core.models import SEVERITIES
-from webscan.core.netguard import BlockedTarget, validate_target
-from webscan.core.runner import ScanError, run_scan
-from webscan.reports import FORMATS
+from siteward.core.models import SEVERITIES
+from siteward.core.netguard import BlockedTarget, validate_target
+from siteward.core.runner import ScanError, run_scan
+from siteward.reports import FORMATS
 
 from . import state, turnstile
 
@@ -3591,7 +3591,7 @@ def scan_export(request, scan_id):
         return HttpResponse("scan has not finished", status=409)
     render_fn, content_type, extension = FORMATS[fmt]
     response = HttpResponse(render_fn(entry.report), content_type=content_type)
-    response["Content-Disposition"] = f'attachment; filename="webscan-report.{extension}"'
+    response["Content-Disposition"] = f'attachment; filename="siteward-report.{extension}"'
     return response
 
 
@@ -3602,20 +3602,20 @@ def policy(request):
                                            "ttl_minutes": settings.SCAN_TTL_SECONDS // 60})
 ```
 
-`webscan/web/templates/base_bootstrap.html`:
+`siteward/web/templates/base_bootstrap.html`:
 ```html
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}webscan{% endblock %}</title>
+  <title>{% block title %}siteward{% endblock %}</title>
   {% load static %}
   <link rel="stylesheet" href="{% static 'vendor/bootstrap.min.css' %}">
 </head>
 <body>
 <nav class="navbar border-bottom mb-4"><div class="container">
-  <a class="navbar-brand" href="{% url 'index' %}">webscan</a>
+  <a class="navbar-brand" href="{% url 'index' %}">siteward</a>
   <a class="nav-link" href="{% url 'policy' %}">Policy &amp; privacy</a>
 </div></nav>
 <main class="container pb-5">{% block content %}{% endblock %}</main>
@@ -3628,10 +3628,10 @@ def policy(request):
 </html>
 ```
 
-`webscan/web/templates/index.html`:
+`siteward/web/templates/index.html`:
 ```html
 {% extends base_template %}
-{% block title %}webscan{% endblock %}
+{% block title %}siteward{% endblock %}
 {% block content %}
 <h1 class="h3">Scan a website</h1>
 <p class="text-muted">Passive security checks. Results are shown here and are <strong>not stored</strong>: export anything you want to keep.</p>
@@ -3659,7 +3659,7 @@ def policy(request):
 {% block scripts %}{% if turnstile_site_key %}<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{% endif %}{% endblock %}
 ```
 
-`webscan/web/templates/scan.html`:
+`siteward/web/templates/scan.html`:
 ```html
 {% extends base_template %}
 {% load static %}
@@ -3676,7 +3676,7 @@ def policy(request):
 {% block scripts %}{% if not expired %}<script src="{% static 'js/poll.js' %}"></script>{% endif %}{% endblock %}
 ```
 
-`webscan/web/templates/_results.html`:
+`siteward/web/templates/_results.html`:
 ```html
 {% if expired %}
 <div class="alert alert-warning">This scan has expired or does not exist. Results are not stored on the server: run the scan again.</div>
@@ -3715,7 +3715,7 @@ def policy(request):
 {% endif %}
 ```
 
-`webscan/web/templates/policy.html`:
+`siteward/web/templates/policy.html`:
 ```html
 {% extends base_template %}
 {% block title %}Policy &amp; privacy{% endblock %}
@@ -3734,7 +3734,7 @@ def policy(request):
 {% endblock %}
 ```
 
-`webscan/web/static/js/poll.js`:
+`siteward/web/static/js/poll.js`:
 ```javascript
 (function () {
   var box = document.getElementById("results");
@@ -3764,7 +3764,7 @@ Run: `pytest -q`
 Expected: all PASS
 
 ```bash
-git add webscan/web tests/test_web.py
+git add siteward/web tests/test_web.py
 git commit -m "feat(web): database-less Django UI with live results, exports, public-mode protections" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
@@ -3773,11 +3773,11 @@ git commit -m "feat(web): database-less Django UI with live results, exports, pu
 ### Task 10: Vendored Bootstrap and the DashLite theme hook
 
 **Files:**
-- Create: `webscan/web/static/vendor/bootstrap.min.css` (downloaded), `webscan/web/static/vendor/BOOTSTRAP_LICENSE.txt`, `webscan/web/templates/base_dashlite.html`
+- Create: `siteward/web/static/vendor/bootstrap.min.css` (downloaded), `siteward/web/static/vendor/BOOTSTRAP_LICENSE.txt`, `siteward/web/templates/base_dashlite.html`
 - Test: add `test_theme_hook_*` to `tests/test_web.py`
 
 **Interfaces:**
-- Consumes: `context.theme` (Task 9b) which returns `base_dashlite.html` only when `THEME=dashlite` and `webscan/web/static/theme/dashlite/css/dashlite.css` exists.
+- Consumes: `context.theme` (Task 9b) which returns `base_dashlite.html` only when `THEME=dashlite` and `siteward/web/static/theme/dashlite/css/dashlite.css` exists.
 - Produces: default Bootstrap skin; optional DashLite skin using the same page blocks.
 
 - [ ] **Step 1: Write the failing tests**
@@ -3794,7 +3794,7 @@ def test_dashlite_requested_but_absent_falls_back_to_bootstrap(client, settings)
 
 
 def test_dashlite_used_when_present(client, settings, tmp_path, monkeypatch):
-    from webscan.web import context as ctx_module
+    from siteward.web import context as ctx_module
 
     fake_root = tmp_path / "static" / "theme" / "dashlite" / "css"
     fake_root.mkdir(parents=True)
@@ -3812,28 +3812,28 @@ Expected: `test_dashlite_used_when_present` FAILS with `TemplateDoesNotExist: ba
 - [ ] **Step 3: Vendor Bootstrap and add the DashLite skin**
 
 ```bash
-mkdir -p webscan/web/static/vendor
-curl -fsSL https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css -o webscan/web/static/vendor/bootstrap.min.css
-curl -fsSL https://raw.githubusercontent.com/twbs/bootstrap/v5.3.3/LICENSE -o webscan/web/static/vendor/BOOTSTRAP_LICENSE.txt
-head -c 200 webscan/web/static/vendor/bootstrap.min.css
+mkdir -p siteward/web/static/vendor
+curl -fsSL https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css -o siteward/web/static/vendor/bootstrap.min.css
+curl -fsSL https://raw.githubusercontent.com/twbs/bootstrap/v5.3.3/LICENSE -o siteward/web/static/vendor/BOOTSTRAP_LICENSE.txt
+head -c 200 siteward/web/static/vendor/bootstrap.min.css
 ```
 Expected: the CSS begins with a Bootstrap v5.3.3 banner comment.
 
-`webscan/web/templates/base_dashlite.html` (same blocks as the Bootstrap base; the page templates use only generic Bootstrap-compatible classes, so they render under DashLite too):
+`siteward/web/templates/base_dashlite.html` (same blocks as the Bootstrap base; the page templates use only generic Bootstrap-compatible classes, so they render under DashLite too):
 ```html
 <!doctype html>
 <html lang="en" class="js">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}webscan{% endblock %}</title>
+  <title>{% block title %}siteward{% endblock %}</title>
   {% load static %}
   <link rel="stylesheet" href="{% static 'theme/dashlite/css/dashlite.css' %}">
 </head>
 <body class="nk-body bg-lighter">
 <div class="nk-app-root"><div class="nk-wrap">
   <div class="nk-header bg-white border-bottom"><div class="container-fluid d-flex justify-content-between py-3">
-    <a class="fw-bold" href="{% url 'index' %}">webscan</a>
+    <a class="fw-bold" href="{% url 'index' %}">siteward</a>
     <a href="{% url 'policy' %}">Policy &amp; privacy</a>
   </div></div>
   <div class="nk-content"><div class="container py-4">
@@ -3856,8 +3856,8 @@ Run: `pytest tests/test_web.py -k theme -v` then `pytest -q`
 Expected: all PASS
 
 ```bash
-git status --short   # confirm nothing under webscan/web/static/theme/ is staged
-git add webscan/web/static/vendor webscan/web/templates/base_dashlite.html tests/test_web.py
+git status --short   # confirm nothing under siteward/web/static/theme/ is staged
+git add siteward/web/static/vendor siteward/web/templates/base_dashlite.html tests/test_web.py
 git commit -m "feat(web): vendored Bootstrap skin and optional git-ignored DashLite theme hook" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
@@ -3878,19 +3878,19 @@ git commit -m "feat(web): vendored Bootstrap skin and optional git-ignored DashL
 `Dockerfile`:
 ```dockerfile
 FROM python:3.12-slim
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DJANGO_SETTINGS_MODULE=webscan.web.settings
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DJANGO_SETTINGS_MODULE=siteward.web.settings
 WORKDIR /app
 COPY pyproject.toml README.md LICENSE ./
-COPY webscan ./webscan
+COPY siteward ./siteward
 RUN pip install --no-cache-dir . \
  && STATIC_ROOT=/app/staticfiles django-admin collectstatic --noinput \
  && useradd --system --no-create-home app \
- && mkdir -p /var/log/webscan && chown app /var/log/webscan
+ && mkdir -p /var/log/siteward && chown app /var/log/siteward
 ENV STATIC_ROOT=/app/staticfiles
 USER app
 EXPOSE 8000
 # One worker + threads: scan results live in this process's memory. No access log by design.
-CMD ["gunicorn", "webscan.web.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "8", "--timeout", "60"]
+CMD ["gunicorn", "siteward.web.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "8", "--timeout", "60"]
 ```
 
 `.dockerignore`:
@@ -3902,13 +3902,13 @@ tests
 __pycache__
 *.egg-info
 staticfiles
-webscan/web/static/theme
+siteward/web/static/theme
 ```
 
 - [ ] **Step 2: Write `README.md`**
 
 ````markdown
-# webscan
+# siteward
 
 A small, self-hostable **passive** web security scanner. Give it a URL, it runs a set of standard checks and shows you the findings; export them as JSON, Markdown, or a self-contained HTML file. **Nothing about scanned sites is stored.**
 
@@ -3924,19 +3924,19 @@ Active tests (XSS/injection probes) are planned for v2 behind an ownership check
 
 ```bash
 pip install .                      # Python 3.11+
-webscan scan https://example.com   # Markdown report to stdout
-webscan scan https://example.com --format html --out report.html
-webscan scan https://example.com --ports --fail-on medium   # exit 1 if medium+ findings (CI-friendly)
+siteward scan https://example.com   # Markdown report to stdout
+siteward scan https://example.com --format html --out report.html
+siteward scan https://example.com --ports --fail-on medium   # exit 1 if medium+ findings (CI-friendly)
 ```
 
 Web UI (local):
 ```bash
-DEBUG=1 django-admin runserver --settings=webscan.web.settings
+DEBUG=1 django-admin runserver --settings=siteward.web.settings
 ```
 Docker:
 ```bash
-docker build -t webscan .
-docker run -p 8000:8000 -e SECRET_KEY=change-me -e ALLOWED_HOSTS=localhost webscan
+docker build -t siteward .
+docker run -p 8000:8000 -e SECRET_KEY=change-me -e ALLOWED_HOSTS=localhost siteward
 ```
 
 The web app has **no login**. Run it on localhost, or behind your own auth/VPN, or use the public-mode setup below.
@@ -3952,10 +3952,10 @@ One container behind Cloudflare, with `PUBLIC_MODE=1`. Required env vars: `TURNS
 Public mode: Turnstile on the form, per-IP (5/h) and per-target (3/h) limits, max 2 concurrent scans, the port check forced off, private targets always refused, and a minimal abuse log (`time, IP, keyed hash of target, options, outcome`; 30 days). To answer an abuse report ("example.com was scanned at 14:02"):
 
 ```bash
-ABUSE_LOG_KEY=... python -m webscan.web.abuse /var/log/webscan example.com
+ABUSE_LOG_KEY=... python -m siteward.web.abuse /var/log/siteward example.com
 ```
 
-Behind Cloudflare also add a WAF rate-limiting rule for the scan form (free tier) as the first line of defence. Mount `/var/log/webscan` as the only writable volume.
+Behind Cloudflare also add a WAF rate-limiting rule for the scan form (free tier) as the first line of defence. Mount `/var/log/siteward` as the only writable volume.
 
 ## Settings
 
@@ -3973,7 +3973,7 @@ Behind Cloudflare also add a WAF rate-limiting rule for the scan form (free tier
 
 ## Themes
 
-The default skin is Bootstrap 5 (MIT, vendored). If you own a licence for the commercial DashLite template, copy **your original, unmodified** package's CSS/fonts/images into `webscan/web/static/theme/dashlite/` (so `css/dashlite.css` exists) and set `THEME=dashlite`. That folder is git-ignored; do not redistribute DashLite files.
+The default skin is Bootstrap 5 (MIT, vendored). If you own a licence for the commercial DashLite template, copy **your original, unmodified** package's CSS/fonts/images into `siteward/web/static/theme/dashlite/` (so `css/dashlite.css` exists) and set `THEME=dashlite`. That folder is git-ignored; do not redistribute DashLite files.
 
 ## Known limits
 
@@ -4000,11 +4000,11 @@ Tests never touch the internet: use the local `server` fixture (`tests/fake_serv
 
 ## Adding a check
 
-A check is one module in `webscan/checks/`. The runner discovers it automatically.
+A check is one module in `siteward/checks/`. The runner discovers it automatically.
 
 ```python
-# webscan/checks/example.py
-from webscan.core.models import Finding, Skip
+# siteward/checks/example.py
+from siteward.core.models import Finding, Skip
 
 ID = "example.thing"        # unique
 CATEGORY = "Example"
@@ -4028,9 +4028,9 @@ Never commit DashLite or other commercial assets.
 ````markdown
 # Security policy
 
-Please report vulnerabilities in webscan privately to the maintainers (see the contact on the project page) rather than opening a public issue. Include steps to reproduce. We aim to acknowledge reports within a few days.
+Please report vulnerabilities in siteward privately to the maintainers (see the contact on the project page) rather than opening a public issue. Include steps to reproduce. We aim to acknowledge reports within a few days.
 
-Areas of particular interest: bypasses of the target validation in `webscan/core/netguard.py` (SSRF), rate-limit bypasses, injection into generated reports, and anything that causes scan data to be persisted.
+Areas of particular interest: bypasses of the target validation in `siteward/core/netguard.py` (SSRF), rate-limit bypasses, injection into generated reports, and anything that causes scan data to be persisted.
 ````
 
 - [ ] **Step 4: Full verification**
@@ -4043,17 +4043,17 @@ Expected: all tests PASS.
 
 Smoke-test the CLI against a real public site you own (this is the only step that uses the internet; use DevBridge's own site):
 ```bash
-webscan scan https://<your-devbridge-site> --format html --out /tmp/webscan-smoke.html --fail-on never
+siteward scan https://<your-devbridge-site> --format html --out /tmp/siteward-smoke.html --fail-on never
 ```
 Expected: exits 0; stderr shows one line per check; the HTML file opens in a browser with a grade, findings, and passed/skipped sections; `ports.common` shows as skipped.
 
 Smoke-test the web UI:
 ```bash
-DEBUG=1 ALLOW_PRIVATE_TARGETS=1 django-admin runserver --settings=webscan.web.settings
+DEBUG=1 ALLOW_PRIVATE_TARGETS=1 django-admin runserver --settings=siteward.web.settings
 ```
 Open http://127.0.0.1:8000, scan your own site, confirm: live progress, results page, export buttons download files, `Cache-Control: no-store` on results, no scan data written anywhere (`find . -newer pyproject.toml -name '*.sqlite*'` finds nothing).
 
-Build the image (if Docker is available): `docker build -t webscan .` — Expected: builds without error.
+Build the image (if Docker is available): `docker build -t siteward .` — Expected: builds without error.
 
 - [ ] **Step 5: Commit**
 

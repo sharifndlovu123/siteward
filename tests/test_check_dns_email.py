@@ -2,8 +2,8 @@ from types import SimpleNamespace as NS
 
 import pytest
 
-from webscan.checks import dns_email
-from webscan.core.models import Skip
+from siteward.checks import dns_email
+from siteward.core.models import Skip
 
 
 def ids(findings):

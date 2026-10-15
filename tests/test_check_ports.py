@@ -1,6 +1,6 @@
 import socket
 
-from webscan.checks import ports
+from siteward.checks import ports
 
 
 def test_open_port_is_reported_and_closed_is_not(server, ctx_for, monkeypatch):

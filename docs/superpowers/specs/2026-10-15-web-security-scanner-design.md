@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-15
 **Status:** Draft for review
-**Project name:** TBD (placeholder: `webscan`)
+**Project name:** TBD (placeholder: `siteward`)
 **Licence:** MIT
 
 ## 1. Purpose

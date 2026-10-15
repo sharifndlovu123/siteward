@@ -1,4 +1,4 @@
-# Architecture — webscan (v1)
+# Architecture — siteward (v1)
 
 Companion to `2026-10-15-web-security-scanner-design.md`. That doc says *what* we build; this one says
 *how it fits together*. Guiding rule: **small enough to read in an afternoon, cheap enough to host on
@@ -97,7 +97,7 @@ test, and Django is happy with it.
 one Jinja2 template with inline CSS (self-contained attachment). No state, trivially snapshot-tested.
 
 ### `cli/`
-One Typer command: `webscan scan URL [--ports] [--format json|md|html] [--out FILE]`. Calls
+One Typer command: `siteward scan URL [--ports] [--format json|md|html] [--out FILE]`. Calls
 `run_scan`, calls a `reports` function, prints or writes the result. No database. Exit code is
 non-zero when findings at or above `--fail-on` severity exist, so it works in CI for free.
 
@@ -180,7 +180,7 @@ TTL expiry or restart → entry gone; nothing was ever written to disk
 ## 8. Repo layout
 
 ```
-webscan/
+siteward/
 ├── core/        models.py  context.py  runner.py  netguard.py
 ├── checks/      one module per check
 ├── reports/     json.py  markdown.py  html.py  report.html.j2

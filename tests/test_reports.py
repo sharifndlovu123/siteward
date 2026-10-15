@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from webscan.reports import FORMATS, render, to_html, to_json, to_markdown
+from siteward.reports import FORMATS, render, to_html, to_json, to_markdown
 
 
 def test_json_roundtrips(sample_report):

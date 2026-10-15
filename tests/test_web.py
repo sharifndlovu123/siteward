@@ -5,7 +5,7 @@ import time
 import pytest
 from django.urls import reverse
 
-from webscan.web import state, turnstile, views
+from siteward.web import state, turnstile, views
 
 
 @pytest.fixture(autouse=True)
@@ -180,7 +180,7 @@ def test_dashlite_requested_but_absent_falls_back_to_bootstrap(client, settings)
 
 
 def test_dashlite_used_when_present(client, settings, tmp_path, monkeypatch):
-    from webscan.web import context as ctx_module
+    from siteward.web import context as ctx_module
 
     fake_root = tmp_path / "static" / "theme" / "dashlite" / "css"
     fake_root.mkdir(parents=True)

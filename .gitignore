@@ -7,4 +7,4 @@ staticfiles/
 .env
 .superpowers/
 # Commercial theme: never commit (see README "Themes")
-webscan/web/static/theme/dashlite/
+siteward/web/static/theme/dashlite/

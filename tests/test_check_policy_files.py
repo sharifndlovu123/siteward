@@ -1,4 +1,4 @@
-from webscan.checks import policy_files
+from siteward.checks import policy_files
 
 
 def ids(findings):

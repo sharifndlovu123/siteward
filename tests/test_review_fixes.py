@@ -7,14 +7,14 @@ from types import SimpleNamespace as NS
 import httpx
 import pytest
 
-from webscan.checks import cookies, exposure, headers, leakage, tls
-from webscan.core import netguard
-from webscan.core.context import build_context
-from webscan.core.models import CheckResult, Finding
-from webscan.core.netguard import FetchError, GuardedClient
-from webscan.core.runner import run_scan
-from webscan.reports import to_markdown
-from webscan.web.store import Store, StoreFull
+from siteward.checks import cookies, exposure, headers, leakage, tls
+from siteward.core import netguard
+from siteward.core.context import build_context
+from siteward.core.models import CheckResult, Finding
+from siteward.core.netguard import FetchError, GuardedClient
+from siteward.core.runner import run_scan
+from siteward.reports import to_markdown
+from siteward.web.store import Store, StoreFull
 
 
 # ---- 1. total time is bounded -------------------------------------------------------------
@@ -63,7 +63,7 @@ def test_slow_drip_response_hits_total_deadline():
 def test_runner_uses_daemon_threads_so_a_hung_check_cannot_block_exit(server):
     hang = NS(ID="a.hang", CATEGORY="T", OPT_IN=None, run=lambda ctx: time.sleep(1.5) or [])
     run_scan(server.url, {"allow_private": True, "min_interval": 0}, checks=[hang], timeout=0.2)
-    leftovers = [t for t in threading.enumerate() if t.name.startswith("webscan-check") and not t.daemon]
+    leftovers = [t for t in threading.enumerate() if t.name.startswith("siteward-check") and not t.daemon]
     assert leftovers == []
 
 
@@ -209,12 +209,12 @@ def test_nameless_cookie_value_is_not_echoed(server, ctx_for):
 # ---- runner: bounded worker threads (follow-up to background review) ----------------------
 
 def test_runner_never_has_more_than_max_workers_check_threads(server):
-    from webscan.core import runner
+    from siteward.core import runner
 
     checks = [NS(ID=f"slow.{i:02d}", CATEGORY="T", OPT_IN=None, run=lambda ctx: time.sleep(1.0) or [])
               for i in range(20)]
     report = run_scan(server.url, {"allow_private": True, "min_interval": 0}, checks=checks, timeout=0.3)
-    live = [t for t in threading.enumerate() if t.name.startswith("webscan-check") and t.is_alive()]
+    live = [t for t in threading.enumerate() if t.name.startswith("siteward-check") and t.is_alive()]
     assert len(live) <= runner.MAX_WORKERS
     assert len(report.results) == 20 and all(r.status == "error" for r in report.results)
 

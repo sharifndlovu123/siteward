@@ -4,9 +4,9 @@ from types import SimpleNamespace as NS
 
 import pytest
 
-from webscan.core.models import Finding, Skip
-from webscan.core.netguard import BlockedTarget
-from webscan.core.runner import ScanError, run_scan
+from siteward.core.models import Finding, Skip
+from siteward.core.netguard import BlockedTarget
+from siteward.core.runner import ScanError, run_scan
 
 OPTS = {"allow_private": True, "min_interval": 0}
 
@@ -93,7 +93,7 @@ def test_private_target_refused_without_allow_private(server):
 
 
 def test_all_builtin_checks_are_discovered():
-    from webscan.core.runner import discover_checks
+    from siteward.core.runner import discover_checks
 
     ids = {m.ID for m in discover_checks()}
     assert ids >= {

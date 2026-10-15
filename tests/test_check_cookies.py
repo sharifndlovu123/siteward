@@ -1,4 +1,4 @@
-from webscan.checks import cookies
+from siteward.checks import cookies
 
 
 def test_session_cookie_without_flags(server, ctx_for):

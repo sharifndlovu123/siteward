@@ -28,7 +28,7 @@ def fake_dns(monkeypatch):
     return mapping
 
 
-from webscan.core.context import build_context  # noqa: E402
+from siteward.core.context import build_context  # noqa: E402
 
 
 @pytest.fixture
@@ -43,7 +43,7 @@ def ctx_for():
 
 from datetime import datetime, timezone  # noqa: E402
 
-from webscan.core.models import CheckResult, Finding, ScanReport  # noqa: E402
+from siteward.core.models import CheckResult, Finding, ScanReport  # noqa: E402
 
 HOSTILE = "<script>alert(1)</script>"
 

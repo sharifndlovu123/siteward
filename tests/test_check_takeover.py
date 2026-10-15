@@ -2,8 +2,8 @@ from types import SimpleNamespace as NS
 
 import pytest
 
-from webscan.checks import takeover
-from webscan.core.models import Skip
+from siteward.checks import takeover
+from siteward.core.models import Skip
 
 
 def ctx(host="shop.example.com", body=""):

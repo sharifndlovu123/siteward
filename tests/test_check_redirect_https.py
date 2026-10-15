@@ -2,8 +2,8 @@ from types import SimpleNamespace as NS
 
 import httpx
 
-from webscan.checks import redirect_https
-from webscan.core.netguard import Fetch, FetchError
+from siteward.checks import redirect_https
+from siteward.core.netguard import Fetch, FetchError
 
 
 def test_plain_http_without_redirect_is_flagged(server, ctx_for):

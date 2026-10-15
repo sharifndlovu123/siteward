@@ -10,11 +10,11 @@ Tests never touch the internet: use the local `server` fixture (`tests/fake_serv
 
 ## Adding a check
 
-A check is one module in `webscan/checks/`. The runner discovers it automatically.
+A check is one module in `siteward/checks/`. The runner discovers it automatically.
 
 ```python
-# webscan/checks/example.py
-from webscan.core.models import Finding, Skip
+# siteward/checks/example.py
+from siteward.core.models import Finding, Skip
 
 ID = "example.thing"        # unique
 CATEGORY = "Example"

@@ -1,4 +1,4 @@
-from webscan.checks import cors
+from siteward.checks import cors
 
 
 def test_reflected_origin_with_credentials_is_high(server, ctx_for):

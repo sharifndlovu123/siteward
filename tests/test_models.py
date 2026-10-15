@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from webscan.core.models import CheckResult, Finding, ScanReport, severity_rank
+from siteward.core.models import CheckResult, Finding, ScanReport, severity_rank
 
 NOW = datetime(2026, 10, 15, 12, 0, tzinfo=timezone.utc)
 

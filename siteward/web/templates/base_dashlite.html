@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en" class="js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}siteward{% endblock %}</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'theme/dashlite/css/dashlite.css' %}">
+</head>
+<body class="nk-body bg-lighter">
+<div class="nk-app-root"><div class="nk-wrap">
+  <div class="nk-header bg-white border-bottom"><div class="container-fluid d-flex justify-content-between py-3">
+    <a class="fw-bold" href="{% url 'index' %}">siteward</a>
+    <a href="{% url 'policy' %}">Policy &amp; privacy</a>
+  </div></div>
+  <div class="nk-content"><div class="container py-4">
+    {% block content %}{% endblock %}
+  </div></div>
+  <div class="container text-muted small pb-4">
+    Only scan sites you own or are authorised to test.
+    {% if donate_url %}&middot; <a href="{{ donate_url }}">Support this project</a>{% endif %}
+  </div>
+</div></div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

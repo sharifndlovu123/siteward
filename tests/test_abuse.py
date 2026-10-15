@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timezone
 
-from webscan.web.abuse import AbuseLog, lookup
+from siteward.web.abuse import AbuseLog, lookup
 
 
 class Clock:

@@ -1,4 +1,4 @@
-from webscan.checks import headers
+from siteward.checks import headers
 
 GOOD = [
     ("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none'"),

@@ -1,4 +1,4 @@
-from webscan.web.limits import SlidingWindow, Slots
+from siteward.web.limits import SlidingWindow, Slots
 
 
 class Clock:

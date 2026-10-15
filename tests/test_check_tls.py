@@ -3,8 +3,8 @@ from types import SimpleNamespace as NS
 
 import pytest
 
-from webscan.checks import tls
-from webscan.core.models import Skip
+from siteward.checks import tls
+from siteward.core.models import Skip
 
 
 def at(text):

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security scan report</title>
+<style>
+  body { font: 16px/1.5 system-ui, sans-serif; max-width: 52rem; margin: 2rem auto; padding: 0 1rem; color: #1b1f24; }
+  h1 { font-size: 1.5rem; } h2 { margin-top: 2rem; font-size: 1.15rem; }
+  .meta { color: #57606a; }
+  .grade { display: inline-block; font-weight: 700; font-size: 1.4rem; padding: .1rem .7rem; border-radius: .4rem; background: #eef1f4; }
+  .counts span, .sev { display: inline-block; padding: 0 .5rem; border-radius: .3rem; font-size: .85rem; font-weight: 600; margin-right: .3rem; }
+  .sev-critical, .sev-high { background: #ffd8d3; color: #8a1f11; }
+  .sev-medium { background: #ffecb5; color: #6b4e00; }
+  .sev-low { background: #d6ebff; color: #0b4a7d; }
+  .sev-info { background: #e6e9ed; color: #3b434b; }
+  details { border: 1px solid #d0d7de; border-radius: .4rem; padding: .6rem .8rem; margin: .5rem 0; }
+  summary { cursor: pointer; font-weight: 600; }
+  pre { background: #f6f8fa; padding: .6rem; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+  li code { background: #f6f8fa; padding: 0 .25rem; }
+</style>
+</head>
+<body>
+<h1>Security scan: {{ r.target }}</h1>
+<p class="meta">Scanned {{ r.started }} &middot; siteward {{ r.version }} &middot; port check {{ 'on' if r.options.ports else 'off' }}</p>
+<p>Grade <span class="grade">{{ r.grade }}</span>{% if r.incomplete %} <strong>(incomplete: some checks errored)</strong>{% endif %}</p>
+<p class="counts">{% for s in severities %}<span class="sev-{{ s }}">{{ s }} {{ r.counts[s] }}</span>{% endfor %}</p>
+
+<h2>Findings</h2>
+{% if not findings %}<p>No findings.</p>{% endif %}
+{% for f in findings %}
+<details>
+  <summary><span class="sev sev-{{ f.severity }}">{{ f.severity }}</span>{{ f.title }}</summary>
+  {% if f.evidence %}<p>Evidence:</p><pre>{{ f.evidence }}</pre>{% endif %}
+  {% if f.remediation %}<p><strong>Fix:</strong> {{ f.remediation }}</p>{% endif %}
+</details>
+{% endfor %}
+
+{% if errors %}<h2>Errored checks</h2><ul>{% for x in errors %}<li><code>{{ x.check_id }}</code>: {{ x.message }}</li>{% endfor %}</ul>{% endif %}
+{% if skipped %}<h2>Skipped checks</h2><ul>{% for x in skipped %}<li><code>{{ x.check_id }}</code>: {{ x.message }}</li>{% endfor %}</ul>{% endif %}
+{% if passed %}<h2>Passed checks</h2><ul>{% for x in passed %}<li><code>{{ x.check_id }}</code></li>{% endfor %}</ul>{% endif %}
+</body>
+</html>

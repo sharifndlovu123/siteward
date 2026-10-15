@@ -1,4 +1,4 @@
-from webscan.checks import leakage
+from siteward.checks import leakage
 
 
 def ids(findings):

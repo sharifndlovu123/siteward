@@ -2,7 +2,7 @@ import json
 
 from typer.testing import CliRunner
 
-from webscan.cli.main import app
+from siteward.cli.main import app
 
 runner = CliRunner()
 

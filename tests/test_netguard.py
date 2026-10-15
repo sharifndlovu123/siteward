@@ -3,7 +3,7 @@ import time
 import httpx
 import pytest
 
-from webscan.core.netguard import (
+from siteward.core.netguard import (
     MAX_BODY,
     BlockedTarget,
     FetchError,
