@@ -90,3 +90,13 @@ def test_unreachable_target_raises_scan_error():
 def test_private_target_refused_without_allow_private(server):
     with pytest.raises(BlockedTarget):
         run_scan(server.url, {"min_interval": 0}, checks=[])
+
+
+def test_all_builtin_checks_are_discovered():
+    from webscan.core.runner import discover_checks
+
+    ids = {m.ID for m in discover_checks()}
+    assert ids >= {
+        "headers.security", "cookies.flags", "cors.policy", "leakage.banner", "transport.https-redirect",
+        "policy.files", "exposure.files", "tls.certificate", "dns.email", "dns.takeover", "ports.common",
+    }
