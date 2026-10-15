@@ -5,7 +5,7 @@ COPY pyproject.toml README.md LICENSE ./
 COPY siteward ./siteward
 RUN pip install --no-cache-dir . \
  && STATIC_ROOT=/app/staticfiles django-admin collectstatic --noinput \
- && useradd --system --no-create-home app \
+ && useradd --system --create-home app \
  && mkdir -p /var/log/siteward && chown app /var/log/siteward
 ENV STATIC_ROOT=/app/staticfiles
 USER app
