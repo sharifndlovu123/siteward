@@ -222,3 +222,9 @@ def test_csrf_failure_page_explains_the_reason_and_how_to_recover(caplog):
     assert "CSRF cookie not set" in body and "reload" in body.lower()
     assert any("csrf rejected" in r.message and "CSRF cookie not set" in r.message for r in caplog.records)
     assert "example.com" not in " ".join(r.message for r in caplog.records)  # never log the target
+
+
+def test_referrer_policy_does_not_make_browsers_send_origin_null(client):
+    # "no-referrer" makes Chromium send "Origin: null" on form POSTs, which Django's CSRF check then rejects.
+    policy = client.get(reverse("index")).headers["Referrer-Policy"]
+    assert policy == "same-origin"

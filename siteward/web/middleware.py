@@ -10,6 +10,7 @@ class SecurityHeadersMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
         response.setdefault("Content-Security-Policy", CSP)
-        response.setdefault("Referrer-Policy", "no-referrer")
+        # NOT "no-referrer": that makes Chromium-based browsers send "Origin: null" on form POSTs, which fails CSRF.
+        response.setdefault("Referrer-Policy", "same-origin")
         response.setdefault("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
         return response
