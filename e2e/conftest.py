@@ -25,41 +25,52 @@ def _free_port():
 
 
 @pytest.fixture(scope="session")
-def live_site(tmp_path_factory):
-    static_root = tmp_path_factory.mktemp("staticfiles")
-    port = _free_port()
-    env = {
-        **os.environ,
-        "DJANGO_SETTINGS_MODULE": "siteward.web.settings",
-        "STATIC_ROOT": str(static_root),
-        "SECRET_KEY": "e2e-only",
-        "ALLOWED_HOSTS": "127.0.0.1,localhost",
-        "ALLOW_PRIVATE_TARGETS": "1",
-        "SCAN_MIN_INTERVAL": "0",
-        "RATE_PER_IP": "1000",
-        "RATE_PER_TARGET": "1000",
-    }
-    subprocess.run([sys.executable, "-m", "django", "collectstatic", "--noinput"],
-                   env=env, cwd=ROOT, check=True, capture_output=True)
-    proc = subprocess.Popen(
-        [sys.executable, "-m", "gunicorn", "siteward.web.wsgi:application",
-         "--bind", f"127.0.0.1:{port}", "--workers", "1", "--threads", "8"],
-        env=env, cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-    base = f"http://127.0.0.1:{port}"
-    for _ in range(100):
-        try:
-            urllib.request.urlopen(base + "/", timeout=1)
-            break
-        except OSError:
-            if proc.poll() is not None:
-                raise RuntimeError(proc.stderr.read().decode())
-            time.sleep(0.1)
-    else:
-        proc.kill()
+def start_site(tmp_path_factory):
+    """Factory: start the real app (gunicorn + collectstatic) with extra env vars; returns its base URL."""
+    procs = []
+
+    def start(**extra_env):
+        static_root = tmp_path_factory.mktemp("staticfiles")
+        port = _free_port()
+        env = {
+            **os.environ,
+            "DJANGO_SETTINGS_MODULE": "siteward.web.settings",
+            "STATIC_ROOT": str(static_root),
+            "SECRET_KEY": "e2e-only",
+            "ALLOWED_HOSTS": "127.0.0.1,localhost",
+            "ALLOW_PRIVATE_TARGETS": "1",
+            "SCAN_MIN_INTERVAL": "0",
+            "RATE_PER_IP": "1000",
+            "RATE_PER_TARGET": "1000",
+            **extra_env,
+        }
+        subprocess.run([sys.executable, "-m", "django", "collectstatic", "--noinput"],
+                       env=env, cwd=ROOT, check=True, capture_output=True)
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "gunicorn", "siteward.web.wsgi:application",
+             "--bind", f"127.0.0.1:{port}", "--workers", "1", "--threads", "8"],
+            env=env, cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        procs.append(proc)
+        base = f"http://127.0.0.1:{port}"
+        for _ in range(100):
+            try:
+                urllib.request.urlopen(base + "/", timeout=1)
+                return base
+            except OSError:
+                if proc.poll() is not None:
+                    raise RuntimeError(proc.stderr.read().decode())
+                time.sleep(0.1)
         raise RuntimeError("gunicorn did not start")
-    yield base
-    proc.terminate()
-    proc.wait(timeout=10)
+
+    yield start
+    for proc in procs:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+@pytest.fixture(scope="session")
+def live_site(start_site):
+    return start_site()
 
 
 @pytest.fixture

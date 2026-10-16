@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import json
 import logging
+import os
 import sys
 import threading
 import time
@@ -38,8 +39,10 @@ class AbuseLog:
                            "options": options, "outcome": outcome}, separators=(",", ":"))
         try:
             with self._lock:
-                self._dir.mkdir(parents=True, exist_ok=True)
-                with open(self._dir / f"abuse-{now:%Y-%m-%d}.log", "a", encoding="utf-8") as fh:
+                self._dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+                # Holds client IPs: owner-only, whatever the process umask is.
+                fd = os.open(self._dir / f"abuse-{now:%Y-%m-%d}.log", os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+                with os.fdopen(fd, "a", encoding="utf-8") as fh:
                     fh.write(line + "\n")
                 self._prune(now)
         except OSError:
