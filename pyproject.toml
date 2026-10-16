@@ -22,6 +22,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-django>=4.8"]
+e2e = ["pytest-playwright>=0.5", "gunicorn"]
 
 [project.scripts]
 siteward = "siteward.cli.main:app"
@@ -36,3 +37,4 @@ siteward = ["reports/*.j2", "web/templates/**/*", "web/static/**/*"]
 testpaths = ["tests"]
 DJANGO_SETTINGS_MODULE = "siteward.web.settings"
 filterwarnings = ["ignore:No directory at:UserWarning"]
+markers = ["expects_http_error: e2e test that deliberately provokes a 4xx page"]
