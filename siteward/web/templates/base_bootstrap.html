@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}siteward{% endblock %}</title>
   {% load static %}
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
   <link rel="stylesheet" href="{% static 'vendor/bootstrap.min.css' %}">
 </head>
 <body>
 <nav class="navbar border-bottom mb-4"><div class="container">
-  <a class="navbar-brand" href="{% url 'index' %}">siteward</a>
+  <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'index' %}"><img src="{% static 'img/logo-mark.svg' %}" alt="" width="28" height="28">siteward</a>
   <a class="nav-link" href="{% url 'policy' %}">Policy &amp; privacy</a>
 </div></nav>
 <main class="container pb-5">{% block content %}{% endblock %}</main>

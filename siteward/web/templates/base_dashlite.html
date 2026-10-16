@@ -5,12 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}siteward{% endblock %}</title>
   {% load static %}
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
   <link rel="stylesheet" href="{% static 'theme/dashlite/css/dashlite.css' %}">
 </head>
 <body class="nk-body bg-lighter">
 <div class="nk-app-root"><div class="nk-wrap">
   <div class="nk-header bg-white border-bottom"><div class="container-fluid d-flex justify-content-between py-3">
-    <a class="fw-bold" href="{% url 'index' %}">siteward</a>
+    <a class="fw-bold d-flex align-items-center gap-2" href="{% url 'index' %}"><img src="{% static 'img/logo-mark.svg' %}" alt="" width="28" height="28">siteward</a>
     <a href="{% url 'policy' %}">Policy &amp; privacy</a>
   </div></div>
   <div class="nk-content"><div class="container py-4">

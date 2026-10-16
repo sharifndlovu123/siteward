@@ -228,3 +228,13 @@ def test_referrer_policy_does_not_make_browsers_send_origin_null(client):
     # "no-referrer" makes Chromium send "Origin: null" on form POSTs, which Django's CSRF check then rejects.
     policy = client.get(reverse("index")).headers["Referrer-Policy"]
     assert policy == "same-origin"
+
+
+def test_logo_assets_are_findable_and_linked(client):
+    from django.contrib.staticfiles import finders
+
+    assert finders.find("img/favicon.svg")
+    assert finders.find("img/logo-mark.svg")
+    html = client.get("/").content.decode()
+    assert 'rel="icon"' in html and "img/favicon.svg" in html
+    assert "img/logo-mark.svg" in html
