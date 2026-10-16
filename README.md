@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/assets/logo.svg" alt="siteward" height="64"></p>
+
 # siteward
 
 A small, self-hostable **passive** web security scanner. Give it a URL, it runs a set of standard checks and shows you the findings; export them as JSON, Markdown, or a self-contained HTML file. **Nothing about scanned sites is stored.**
