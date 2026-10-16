@@ -19,6 +19,16 @@ pytest e2e          # Docker tests skip themselves if docker is not installed
 
 Any console error, JS error or failed request fails a browser test. Mark a test `@pytest.mark.expects_http_error` if it deliberately provokes a 4xx page.
 
+What lives there: the scan flow and exports, the logo and static files, public mode with Cloudflare's Turnstile test keys (needs internet), accessibility (axe-core, WCAG 2.1 AA), no horizontal scroll from 320px to desktop, a light load test, the site scanning itself, and the Docker image.
+
+### Checking a deployed site
+
+```bash
+python scripts/smoke_deployed.py https://scan.example.com --public
+```
+
+Checks the page, security headers, static files, error pages, the HTTP to HTTPS redirect, certificate expiry (`--min-cert-days`) and a self-scan, and exits 1 on any failure. `.github/workflows/monitor.yml` runs it daily against the repository variable `SITE_URL`, which doubles as uptime and certificate monitoring.
+
 ## Adding a check
 
 A check is one module in `siteward/checks/`. The runner discovers it automatically.

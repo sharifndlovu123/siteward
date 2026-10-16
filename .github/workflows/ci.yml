@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main, v1-build]
+  pull_request:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: pip install -e '.[dev]'
+      - run: pytest -q
+
+  site:
+    # Real browser + gunicorn + the Docker image + the site scanning itself. Needs internet (Turnstile test keys).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e '.[dev,e2e]'
+      - run: playwright install --with-deps chromium
+      - run: pytest e2e -q

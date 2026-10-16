@@ -140,3 +140,10 @@ def test_real_local_request_needs_allow_private(server):
     assert GuardedClient(allow_private=True, min_interval=0).get(server.url + "/").status == 200
     with pytest.raises(BlockedTarget):
         GuardedClient(min_interval=0).get(server.url + "/")
+
+
+def test_overlong_url_is_refused():
+    from siteward.core.netguard import BlockedTarget, MAX_URL_LENGTH, validate_target
+
+    with pytest.raises(BlockedTarget, match="longer than"):
+        validate_target("https://example.com/" + "x" * MAX_URL_LENGTH)

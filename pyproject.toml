@@ -22,7 +22,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-django>=4.8"]
-e2e = ["pytest-playwright>=0.5", "gunicorn"]
+e2e = ["pytest-playwright>=0.5", "gunicorn", "axe-playwright-python>=0.1.4", "httpx"]
 
 [project.scripts]
 siteward = "siteward.cli.main:app"

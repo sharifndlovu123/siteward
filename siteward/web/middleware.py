@@ -8,6 +8,7 @@ class SecurityHeadersMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        request.get_host()  # Django validates Host lazily; do it for every request so a forged Host is always a 400
         response = self.get_response(request)
         response.setdefault("Content-Security-Policy", CSP)
         # NOT "no-referrer": that makes Chromium-based browsers send "Origin: null" on form POSTs, which fails CSRF.

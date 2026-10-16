@@ -1,0 +1,21 @@
+name: Monitor public site
+
+# Daily smoke test of the live site: page, headers, static files, HTTPS redirect, certificate expiry and a
+# self-scan. A failed run emails the repo's watchers. Set the repository variable SITE_URL (Settings > Variables).
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    if: ${{ vars.SITE_URL != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install .
+      - run: python scripts/smoke_deployed.py "${{ vars.SITE_URL }}" --public

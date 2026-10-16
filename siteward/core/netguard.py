@@ -55,8 +55,13 @@ def _is_public(ip_text: str) -> bool:
     return ip.is_global
 
 
+MAX_URL_LENGTH = 2048  # the de facto limit browsers and servers accept
+
+
 def validate_target(raw_url: str, allow_private: bool = False) -> Target:
     raw = (raw_url or "").strip()
+    if len(raw) > MAX_URL_LENGTH:
+        raise BlockedTarget(f"URL is longer than {MAX_URL_LENGTH} characters")
     if "://" not in raw:
         raw = "https://" + raw
     try:

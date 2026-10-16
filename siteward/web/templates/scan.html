@@ -3,6 +3,7 @@
 {% block title %}Scan results{% endblock %}
 {% block content %}
 {% if expired %}
+  <h1 class="h4">Scan not found</h1>
   <div class="alert alert-warning">This scan has expired or does not exist. Results are not stored on the server: run the scan again.</div>
   <a class="btn btn-primary" href="{% url 'index' %}">New scan</a>
 {% else %}
