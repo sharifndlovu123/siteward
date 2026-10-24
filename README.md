@@ -4,7 +4,11 @@
 
 A small, self-hostable **passive** web security scanner. Give it a URL, it runs a set of standard checks and shows you the findings; export them as JSON, Markdown, or a self-contained HTML file. **Nothing about scanned sites is stored.**
 
-> Only scan sites you own or are explicitly authorised to test. This is a routine-coverage tool; it does not replace a manual penetration test.
+> [!IMPORTANT]
+> **Only use siteward on websites you run yourself, or where you have explicit authority to test.**
+> It exists to help developers find gaps in the sites they are building or managing, and to find them sooner. Running it against a service you have no permission to test is your own action, and you alone are responsible for it and any consequences. The authors and contributors accept no liability for misuse.
+>
+> siteward is a routine-coverage tool; it does not replace a manual penetration test.
 
 ## What it checks (v1)
 
@@ -39,18 +43,6 @@ The web app has **no login**. Run it on localhost, or behind your own auth/VPN, 
 ## Privacy: nothing is stored
 
 There is no database. Web results live in server memory for 15 minutes after a scan finishes, then vanish; exports stream straight to you. Logs never contain targets or findings.
-
-## Public instance (free, behind Cloudflare)
-
-One container behind Cloudflare, with `PUBLIC_MODE=1`. Required env vars: `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET`, `ABUSE_LOG_KEY`; also set `TRUST_CF_HEADERS=1` **only if the container is reachable solely through Cloudflare** (firewall to Cloudflare IP ranges), `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, `SECRET_KEY`, `CONTACT_EMAIL`, and optionally `DONATE_URL`.
-
-Public mode: Turnstile on the form, per-IP (5/h) and per-target (3/h) limits, max 2 concurrent scans, the port check forced off, private targets always refused, and a minimal abuse log (`time, IP, keyed hash of target, options, outcome`; 30 days). To answer an abuse report ("example.com was scanned at 14:02"):
-
-```bash
-ABUSE_LOG_KEY=... python -m siteward.web.abuse /var/log/siteward example.com
-```
-
-Behind Cloudflare also add a WAF rate-limiting rule for the scan form (free tier) as the first line of defence. Mount `/var/log/siteward` as the only writable volume.
 
 ## Settings
 
