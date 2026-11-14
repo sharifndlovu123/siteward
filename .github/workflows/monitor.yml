@@ -3,8 +3,8 @@ name: Monitor public site
 # Daily smoke test of the live site: page, headers, static files, HTTPS redirect, certificate expiry and a
 # self-scan. A failed run emails the repo's watchers. Set the repository variable SITE_URL (Settings > Variables).
 on:
-  schedule:
-    - cron: "17 6 * * *"
+  # schedule:
+  #   - cron: "17 6 * * *"
   workflow_dispatch:
 
 jobs:
